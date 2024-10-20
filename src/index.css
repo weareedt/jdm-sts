@@ -1,0 +1,73 @@
+html,
+body {
+  margin: 0;
+  overflow: hidden;
+  background-color: black;
+}
+
+canvas {
+  display: block;
+}
+
+/* Chat Frame for Chatbot */
+#chat-frame {
+  position: fixed;
+  bottom: 20px; /* Space from the bottom */
+  right: 20px; /* Space from the right */
+  width: 300px; /* Width of the frame */
+  border: 2px solid #ccc; /* Border for the frame */
+  border-radius: 8px; /* Rounded corners */
+  background-color: rgba(50, 55, 57, 0.9); /* Frame background color */
+  padding: 10px; /* Padding inside the frame */
+}
+
+#chat-content {
+  margin-top: 10px; /* Space between toggle button and content */
+  max-height: 400px; /* Set a maximum height for the chat content */
+  overflow-y: auto; /* Enable vertical scrolling */
+}
+
+.hidden {
+  display: none; /* Hide the chat content by default */
+}
+
+#chat-output {
+  margin-top: 20px;
+  color: white;
+}
+
+#transcription-output {
+  margin-top: 20px;
+}
+
+/* Chat Frame for Speech-to-Speech */
+#speech-chat-frame {
+  position: fixed;
+  bottom: 20px; /* Space from the bottom */
+  left: 20px; /* Space from the left */
+  width: 250px; /* Width of the frame */
+  border: 2px solid #ccc; /* Border for the frame */
+  border-radius: 8px; /* Rounded corners */
+  background-color: rgba(50, 55, 57, 0.9); /* Frame background color */
+  padding: 10px; /* Padding inside the frame */
+}
+
+#speech-chat-content {
+  margin-top: 10px; /* Space between button and content */
+  max-height: 300px; /* Set a maximum height for the speech content */
+  overflow-y: auto; /* Enable vertical scrolling */
+}
+
+button {
+  margin: 5px; /* Space between buttons */
+  padding: 5px 10px; /* Add padding for better click area */
+  border-radius: 5px; /* Rounded corners */
+  background-color: #007bff; /* Button background color */
+  color: white; /* Button text color */
+  border: none; /* Remove border */
+  cursor: pointer; /* Pointer cursor on hover */
+}
+
+button:hover {
+  background-color: #0056b3; /* Darker shade on hover */
+}
