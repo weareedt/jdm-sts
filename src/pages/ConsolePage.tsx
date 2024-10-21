@@ -23,6 +23,7 @@ import { X, Edit, Zap, ArrowUp, ArrowDown } from 'react-feather';
 import { Button } from '../components/button/Button';
 import { Toggle } from '../components/toggle/Toggle';
 import { Map } from '../components/Map';
+import Visualizer from './Visualizer'; // Add this import at the top of the file
 
 import './ConsolePage.scss';
 import { isJsxOpeningLikeElement } from 'typescript';
@@ -124,6 +125,9 @@ export function ConsolePage() {
     lng: -122.418137,
   });
   const [marker, setMarker] = useState<Coordinates | null>(null);
+
+  // Add state for audio data
+  const [audioData, setAudioData] = useState(new Uint8Array(0));
 
   /**
    * Utility for formatting the timing of logs
@@ -362,6 +366,21 @@ export function ConsolePage() {
     };
     render();
 
+    // Set up audio data update
+    const updateAudioData = () => {
+      const data = wavRecorder.recording
+        ? wavRecorder.getFrequencies('voice').values
+        : wavStreamPlayer.analyser
+        ? wavStreamPlayer.getFrequencies('voice').values
+        : new Float32Array(128);
+      setAudioData(new Uint8Array(data));
+      if (isLoaded) {
+        requestAnimationFrame(updateAudioData);
+      }
+    };
+
+    updateAudioData();
+
     return () => {
       isLoaded = false;
     };
@@ -480,7 +499,7 @@ export function ConsolePage() {
     <div data-component="ConsolePage">
       <div className="content-top">
         <div className="content-title">
-        <button id="start" onClick={handleStartPause}>{isPlaying ? 'Pause' : 'Start'} </button>
+          {/* Remove the start button */}
         </div>
         <div className="content-api-key">
           {!LOCAL_RELAY_SERVER_URL && (
@@ -496,6 +515,7 @@ export function ConsolePage() {
       </div>
       <div className="content-main">
         <div className="content-logs">
+          {/* Keep the existing visualization block */}
           <div className="content-block events">
             <div className="visualization">
               <div className="visualization-entry client">
@@ -506,6 +526,9 @@ export function ConsolePage() {
               </div>
             </div>
           </div>
+
+
+
           <div className="content-block conversation" style={{color: 'white'}}>
             <div className="content-block-title">conversation</div>
             <div className="content-block-body" data-conversation-content>
@@ -600,21 +623,6 @@ export function ConsolePage() {
           </div>
         </div>
       </div>
-       
-    {/* <!-- Chat Frame for Chatbot --> */}
-    <div id="chat-frame">
-        <button id="toggle-frame">Open Chat</button>
-        <div id="chat-content" className="hidden">
-            <button id="clear-chat">Clear Chat</button>
-            <button id="start-recording">Start Recording</button>
-            <button id="stop-recording" disabled>Stop Recording</button>
-            <div id="recording-status" style={{color: 'red', display: 'none'}}>Recording...</div>
-            <div id="chat-output"></div>
-            <div id="transcription-output"></div>
-            <input type="text" id="user-input" placeholder="Type your message here"/>
-            <button id="send-message">Send</button>
-        </div>
-    </div>
     </div>
   );
 }

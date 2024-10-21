@@ -1,6 +1,7 @@
-html,
-body {
+body, html {
   margin: 0;
+  padding: 0;
+  height: 100%;
   overflow: hidden;
   background-color: black;
 }
@@ -59,15 +60,16 @@ canvas {
 }
 
 button {
-  margin: 5px; /* Space between buttons */
-  padding: 5px 10px; /* Add padding for better click area */
-  border-radius: 5px; /* Rounded corners */
-  background-color: #007bff; /* Button background color */
-  color: white; /* Button text color */
-  border: none; /* Remove border */
-  cursor: pointer; /* Pointer cursor on hover */
+  margin: 10px;
+  padding: 10px 20px;
+  font-size: 16px;
+  background-color: #00fff2;
+  color: black;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
 }
 
 button:hover {
-  background-color: #0056b3; /* Darker shade on hover */
+  background-color: #00ccb2;
 }
