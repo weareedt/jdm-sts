@@ -22,11 +22,11 @@ import { WavRenderer } from '../utils/wav_renderer';
 import { X, Edit, Zap, ArrowUp, ArrowDown } from 'react-feather';
 import { Button } from '../components/button/Button';
 import { Toggle } from '../components/toggle/Toggle';
-import { Map } from '../components/Map';
-import Visualizer from './Visualizer'; // Add this import at the top of the file
+import { Map } from '../components/Map'; 
 
 import './ConsolePage.scss';
 import { isJsxOpeningLikeElement } from 'typescript';
+import * as THREE from 'three';
 
 /**
  * Type for result from get_weather() function call
@@ -128,6 +128,15 @@ export function ConsolePage() {
 
   // Add state for audio data
   const [audioData, setAudioData] = useState(new Uint8Array(0));
+
+  // Add state for minimizing chat
+  const [isMinimized, setIsMinimized] = useState(false);
+
+  const mountRef = useRef<HTMLDivElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
+  const [sound, setSound] = useState<THREE.Audio | null>(null);
+  const [analyser, setAnalyser] = useState<THREE.AudioAnalyser | null>(null);
 
   /**
    * Utility for formatting the timing of logs
@@ -271,6 +280,11 @@ export function ConsolePage() {
       await wavRecorder.record((data) => client.appendInputAudio(data.mono));
     }
     setCanPushToTalk(value === 'none');
+  };
+
+  // Function to toggle minimized state
+  const toggleMinimize = () => {
+    setIsMinimized((prev) => !prev);
   };
 
   /**
@@ -476,31 +490,167 @@ export function ConsolePage() {
     };
   }, []);
 
-  const [isPlaying, setIsPlaying] = useState(false); // Manage isPlaying state
-  const [isRecordingMusic, setIsRecordingMusic] = useState(false); // Manage isRecording state
-  const sound = new Audio('/static/Beats.mp3'); // Load the audio file
+  useEffect(() => {
+    if (!mountRef.current) return;
+
+    const width = mountRef.current.clientWidth;
+    const height = mountRef.current.clientHeight;
+
+    // Scene setup
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(width, height);
+    mountRef.current.appendChild(renderer.domElement);
+
+    camera.position.z = 7;
+
+    // Shader setup
+    const vertexShader = `
+      precision mediump float;
+      uniform float u_time;
+      uniform float u_amplitude;
+      varying vec3 vNormal;
+      varying vec3 vPosition;
+
+      void main() {
+        vec3 newPosition = position + normal * (sin(u_time + position.y * 2.0) * cos(u_time + position.x * 2.0) * u_amplitude);
+        vNormal = normalize(normal);
+        vPosition = newPosition;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(newPosition, 2);
+      }
+    `;
+
+    const fragmentShader = `
+      uniform vec3 u_color;
+      varying vec3 vPosition;
+      varying vec3 vNormal;
+
+      void main() {
+        float intensity = dot(normalize(vNormal), vec3(0.0, 0.0, 1.0));
+        vec3 finalColor = mix(u_color, vec3(0.1, 0.1, 0.1), intensity);
+        gl_FragColor = vec4(u_color, 1.0);
+      }
+    `;
+
+    const shaderMaterial = new THREE.ShaderMaterial({
+      vertexShader,
+      fragmentShader,
+      uniforms: {
+        u_time: { value: 0.0 },
+        u_amplitude: { value: 0.1 },
+        u_color: { value: new THREE.Color(0x00fff2) }
+      },
+      wireframe: true,
+      side: THREE.DoubleSide
+    });
+
+    const icosahedronGeometry = new THREE.IcosahedronGeometry(2, 3);
+    const icosahedron = new THREE.Mesh(icosahedronGeometry, shaderMaterial);
+    scene.add(icosahedron);
+
+    // Microphone setup
+    let audioContext: AudioContext;
+    let analyser: AnalyserNode;
+    let microphone: MediaStreamAudioSourceNode;
+
+    const setupMicrophone = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        audioContext = new AudioContext();
+        analyser = audioContext.createAnalyser();
+        microphone = audioContext.createMediaStreamSource(stream);
+        microphone.connect(analyser);
+        analyser.fftSize = 256;
+      } catch (error) {
+        console.error('Error accessing microphone:', error);
+      }
+    };
+
+    setupMicrophone();
+
+    // Animation loop
+    const animate = () => {
+      requestAnimationFrame(animate);
+
+      shaderMaterial.uniforms.u_time.value += 0.07;
+
+      if (analyser) {
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+        analyser.getByteFrequencyData(dataArray);
+        const average = dataArray.reduce((sum, value) => sum + value, 0) / dataArray.length;
+        shaderMaterial.uniforms.u_amplitude.value = average / 256 * 0.4;
+      } else {
+        // Idle animation
+        const time = Date.now() * 0.01; // Convert to seconds
+        const idleAmplitude = Math.sin(time) * 0.05 + 0.2; // Oscillate between 0.05 and 0.15
+        shaderMaterial.uniforms.u_amplitude.value = idleAmplitude;
+      }
+
+      // Expand and minimize animation for idle
+      const scale = 1 + Math.sin(Date.now() * 0.001) * 0.05; // Oscillate scale between 0.95 and 1.05
+      icosahedron.scale.set(scale, scale, scale);
+
+      renderer.render(scene, camera);
+    };
+    animate();
+
+    // Resize handler
+    const handleResize = () => {
+      if (!mountRef.current) return;
+      const width = mountRef.current.clientWidth;
+      const height = mountRef.current.clientHeight;
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+      renderer.setSize(width, height);
+    };
+    window.addEventListener('resize', handleResize);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      mountRef.current?.removeChild(renderer.domElement);
+      if (audioContext) {
+        audioContext.close();
+      }
+    };
+  }, []);
+
+  const initializeAudio = () => {
+    if (!audioContext) {
+      const newAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      setAudioContext(newAudioContext);
+      const listener = new THREE.AudioListener();
+      const newSound = new THREE.Audio(listener);
+      setSound(newSound);
+      setAnalyser(new THREE.AudioAnalyser(newSound, 32));
+
+      const audioLoader = new THREE.AudioLoader();
+      audioLoader.load('/static/Beats.mp3', (buffer) => {
+        newSound.setBuffer(buffer);
+        newSound.setLoop(true);
+        newSound.setVolume(0.5);
+      });
+    }
+  };
 
   const handleStartPause = () => {
-    if (isPlaying) {
-      sound.pause(); // Pause the sound
-      setIsPlaying(false); // Update state to reflect that sound is paused
-      setIsRecordingMusic(false); // Stop waving effect
-    } else {
-      sound.play(); // Play the sound
-      setIsPlaying(true); // Update state to reflect that sound is playing
-      setIsRecordingMusic(true); // Start waving effect
+    initializeAudio();
+    if (isPlaying && sound) {
+      sound.pause();
+    } else if (sound) {
+      sound.play();
     }
+    setIsPlaying(!isPlaying);
   };
 
   /**
    * Render the application
    */
+  
   return (
     <div data-component="ConsolePage">
       <div className="content-top">
-        <div className="content-title">
-          {/* Remove the start button */}
-        </div>
         <div className="content-api-key">
           {!LOCAL_RELAY_SERVER_URL && (
             <Button
@@ -515,84 +665,83 @@ export function ConsolePage() {
       </div>
       <div className="content-main">
         <div className="content-logs">
-          {/* Keep the existing visualization block */}
           <div className="content-block events">
-            <div className="visualization">
-              <div className="visualization-entry client">
-                <canvas ref={clientCanvasRef} />
-              </div>
-              <div className="visualization-entry server">
-                <canvas ref={serverCanvasRef} />
-              </div>
+            <div className="visualization" ref={mountRef} style={{ width: '100%', height: '100%' }}>
+              <Button
+                iconPosition="end"
+                icon={isMinimized ? ArrowDown : ArrowUp}
+                buttonStyle="flush"
+                onClick={toggleMinimize}
+                className="minimize-button"
+              />
             </div>
           </div>
-
-
-
-          <div className="content-block conversation" style={{color: 'white'}}>
-            <div className="content-block-title">conversation</div>
-            <div className="content-block-body" data-conversation-content>
-              {!items.length && `awaiting connection...`}
-              {items.map((conversationItem, i) => {
-                return (
-                  <div className="conversation-item" key={conversationItem.id}>
-                    <div className={`speaker ${conversationItem.role || ''}`}>
-                      <div>
-                        {(
-                          conversationItem.role || conversationItem.type
-                        ).replaceAll('_', ' ')}
-                      </div>
-                      <div
-                        className="close"
-                        onClick={() =>
-                          deleteConversationItem(conversationItem.id)
-                        }
-                      >
-                        <X />
-                      </div>
-                    </div>
-                    <div className={`speaker-content`} style={{color: 'white'}}>
-                      {/* tool response */}
-                      {conversationItem.type === 'function_call_output' && (
-                        <div>{conversationItem.formatted.output}</div>
-                      )}
-                      {/* tool call */}
-                      {!!conversationItem.formatted.tool && (
+          {!isMinimized && (
+            <div className="content-block conversation" style={{ color: 'white' }}>
+              <div className="content-block-title">conversation</div>
+              <div className="content-block-body" data-conversation-content>
+                {!items.length && `awaiting connection..`}
+                {items.map((conversationItem, i) => {
+                  return (
+                    <div className="conversation-item" key={conversationItem.id}>
+                      <div className={`speaker ${conversationItem.role || ''}`}>
                         <div>
-                          {conversationItem.formatted.tool.name}(
-                          {conversationItem.formatted.tool.arguments})
+                          {(
+                            conversationItem.role || conversationItem.type
+                          ).replaceAll('_', ' ')}
                         </div>
-                      )}
-                      {!conversationItem.formatted.tool &&
-                        conversationItem.role === 'user' && (
+                        <div
+                          className="close"
+                          onClick={() =>
+                            deleteConversationItem(conversationItem.id)
+                          }
+                        >
+                          <X />
+                        </div>
+                      </div>
+                      <div className={`speaker-content`} style={{ color: 'white' }}>
+                        {/* tool response */}
+                        {conversationItem.type === 'function_call_output' && (
+                          <div>{conversationItem.formatted.output}</div>
+                        )}
+                        {/* tool call */}
+                        {!!conversationItem.formatted.tool && (
                           <div>
-                            {conversationItem.formatted.transcript ||
-                              (conversationItem.formatted.audio?.length
-                                ? '(awaiting transcript)'
-                                : conversationItem.formatted.text ||
-                                  '(item sent)')}
+                            {conversationItem.formatted.tool.name}(
+                            {conversationItem.formatted.tool.arguments})
                           </div>
                         )}
-                      {!conversationItem.formatted.tool &&
-                        conversationItem.role === 'assistant' && (
-                          <div>
-                            {conversationItem.formatted.transcript ||
-                              conversationItem.formatted.text ||
-                              '(truncated)'}
-                          </div>
+                        {!conversationItem.formatted.tool &&
+                          conversationItem.role === 'user' && (
+                            <div>
+                              {conversationItem.formatted.transcript ||
+                                (conversationItem.formatted.audio?.length
+                                  ? '(awaiting transcript)'
+                                  : conversationItem.formatted.text ||
+                                    '(item sent)')}
+                            </div>
+                          )}
+                        {!conversationItem.formatted.tool &&
+                          conversationItem.role === 'assistant' && (
+                            <div>
+                              {conversationItem.formatted.transcript ||
+                                conversationItem.formatted.text ||
+                                '(truncated)'}
+                            </div>
+                          )}
+                        {conversationItem.formatted.file && (
+                          <audio
+                            src={conversationItem.formatted.file.url}
+                            controls
+                          />
                         )}
-                      {conversationItem.formatted.file && (
-                        <audio
-                          src={conversationItem.formatted.file.url}
-                          controls
-                        />
-                      )}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
           <div className="content-actions">
             <Toggle
               defaultValue={false}
@@ -611,15 +760,18 @@ export function ConsolePage() {
               />
             )}
             <div className="spacer" />
-            <Button
-              label={isConnected ? 'disconnect' : 'connect'}
-              iconPosition={isConnected ? 'end' : 'start'}
-              icon={isConnected ? X : Zap}
-              buttonStyle={isConnected ? 'regular' : 'action'}
-              onClick={
-                isConnected ? disconnectConversation : connectConversation
-              }
-            />
+            
+            <div className="action-button" style={{ position: 'absolute', top: '10px', right: '16px' }}>
+              <Button
+                icon={isConnected ? X : Zap}
+                iconPosition={isConnected ? 'end' : 'start'}
+                buttonStyle={isConnected ? 'regular' : 'action'}
+                label={isConnected ? 'disconnect' : 'connect'}
+                onClick={
+                  isConnected ? disconnectConversation : connectConversation
+                }
+              />
+            </div>
           </div>
         </div>
       </div>

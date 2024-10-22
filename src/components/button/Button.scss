@@ -9,7 +9,7 @@
   font-style: normal;
   border: none;
   background-color: #ececf1;
-  color: #101010;
+  color: white;
   border-radius: 1000px;
   padding: 8px 24px;
   min-height: 42px;
@@ -30,10 +30,6 @@
     &:hover:not([disabled]) {
       background-color: #f00;
     }
-  }
-
-  &.button-style-flush {
-    background-color: rgba(255, 255, 255, 0);
   }
 
   &[disabled] {
@@ -78,6 +74,20 @@
   &.icon-fill {
     svg {
       fill: currentColor;
+    }
+  }
+
+  &.button-style-flush {
+    background-color: #28817e;
+    color: #000;
+    border: 0.5px solid #000;
+    &:hover:not([disabled]) {
+      background-color: #00fff4;
+    }
+    &:active:not([disabled]) {
+      background-color: #000;
+      color: #00fff4;
+      transform: translateY(1px);
     }
   }
 }
