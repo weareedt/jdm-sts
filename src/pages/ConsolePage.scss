@@ -35,7 +35,15 @@
     .connect-button {
       display: flex;
       align-items: center;
-      margin-left: auto; // Added to move the button to the right
+      margin-left: auto;
+      padding: 8px 16px;
+      border-radius: 4px;
+      transition: background-color 0.3s ease;
+      
+      &:active, &.active {
+        background-color: #0099ff; // Change this to your preferred active color
+        color: white;
+      }
     }
   }
 
@@ -132,6 +140,16 @@
         align-items: center;
         justify-content: center;
         gap: 14px;
+        .push-to-talk-button {
+          padding: 8px 16px;
+          border-radius: 4px;
+          transition: background-color 0.3s ease;
+          
+          &:active, &.active {
+            background-color: #009900; // Change this to your preferred active color
+            color: white;
+          }
+        }
       }
       & > div.events {
         overflow: hidden;

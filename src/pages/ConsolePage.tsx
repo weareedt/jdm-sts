@@ -25,8 +25,8 @@ import { Toggle } from '../components/toggle/Toggle';
 import { Map } from '../components/Map'; 
 
 import './ConsolePage.scss';
-import { isJsxOpeningLikeElement } from 'typescript';
 import * as THREE from 'three';
+import { vertexShader, fragmentShader } from '../utils/shaders';
 
 /**
  * Type for result from get_weather() function call
@@ -496,104 +496,84 @@ export function ConsolePage() {
     const width = mountRef.current.clientWidth;
     const height = mountRef.current.clientHeight;
 
-    // Scene setup
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(width, height);
     mountRef.current.appendChild(renderer.domElement);
 
-    camera.position.z = 7;
+    camera.position.z = 9;
 
-    // Shader setup
-    const vertexShader = `
-      precision mediump float;
-      uniform float u_time;
-      uniform float u_amplitude;
-      varying vec3 vNormal;
-      varying vec3 vPosition;
-
-      void main() {
-        vec3 newPosition = position + normal * (sin(u_time + position.y * 2.0) * cos(u_time + position.x * 2.0) * u_amplitude);
-        vNormal = normalize(normal);
-        vPosition = newPosition;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(newPosition, 2);
-      }
-    `;
-
-    const fragmentShader = `
-      uniform vec3 u_color;
-      varying vec3 vPosition;
-      varying vec3 vNormal;
-
-      void main() {
-        float intensity = dot(normalize(vNormal), vec3(0.0, 0.0, 1.0));
-        vec3 finalColor = mix(u_color, vec3(0.1, 0.1, 0.1), intensity);
-        gl_FragColor = vec4(u_color, 1.0);
-      }
-    `;
-
+    // Adjust the second parameter to change the complexity of the sphere
+  
+    const geometry = new THREE.IcosahedronGeometry(2, 10);
+    
     const shaderMaterial = new THREE.ShaderMaterial({
       vertexShader,
       fragmentShader,
       uniforms: {
         u_time: { value: 0.0 },
-        u_amplitude: { value: 0.1 },
-        u_color: { value: new THREE.Color(0x00fff2) }
+        u_amplitude: { value: 1.0 },
+        u_explosiveness: { value: 0.5 },
+        u_avgVolume: { value: 0.0 },
+        u_color1: { value: new THREE.Color(0x00ff00) }, // Neon green
+        u_color2: { value: new THREE.Color(0xff00ff) }, // Neon pink
       },
-      wireframe: true,
+      transparent: true,
       side: THREE.DoubleSide
     });
 
-    const icosahedronGeometry = new THREE.IcosahedronGeometry(2, 3);
-    const icosahedron = new THREE.Mesh(icosahedronGeometry, shaderMaterial);
-    scene.add(icosahedron);
+    const sphere = new THREE.Mesh(geometry, shaderMaterial);
+    scene.add(sphere);
 
-    // Microphone setup
+    // Audio setup
     let audioContext: AudioContext;
     let analyser: AnalyserNode;
-    let microphone: MediaStreamAudioSourceNode;
 
-    const setupMicrophone = async () => {
+    const initAudio = async () => {
+      audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      analyser = audioContext.createAnalyser();
+      analyser.fftSize = 256;
+
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        audioContext = new AudioContext();
-        analyser = audioContext.createAnalyser();
-        microphone = audioContext.createMediaStreamSource(stream);
-        microphone.connect(analyser);
-        analyser.fftSize = 256;
+        const source = audioContext.createMediaStreamSource(stream);
+        source.connect(analyser);
       } catch (error) {
-        console.error('Error accessing microphone:', error);
+        console.error("Error accessing the microphone", error);
       }
     };
 
-    setupMicrophone();
+    initAudio();
 
-    // Animation loop
     const animate = () => {
       requestAnimationFrame(animate);
 
-      shaderMaterial.uniforms.u_time.value += 0.07;
+      shaderMaterial.uniforms.u_time.value += 0.01;
 
       if (analyser) {
         const dataArray = new Uint8Array(analyser.frequencyBinCount);
         analyser.getByteFrequencyData(dataArray);
         const average = dataArray.reduce((sum, value) => sum + value, 0) / dataArray.length;
-        shaderMaterial.uniforms.u_amplitude.value = average / 256 * 0.4;
-      } else {
-        // Idle animation
-        const time = Date.now() * 0.01; // Convert to seconds
-        const idleAmplitude = Math.sin(time) * 0.05 + 0.2; // Oscillate between 0.05 and 0.15
-        shaderMaterial.uniforms.u_amplitude.value = idleAmplitude;
-      }
+        const normalizedAverage = average / 255;
 
-      // Expand and minimize animation for idle
-      const scale = 1 + Math.sin(Date.now() * 0.001) * 0.05; // Oscillate scale between 0.95 and 1.05
-      icosahedron.scale.set(scale, scale, scale);
+        // Capped Reactiveness Values
+        const cappedAvgVolume = Math.min(normalizedAverage * 3.0, 1.0); // Caps volume at 0.8
+        const cappedAmplitude = Math.min(1.0 + cappedAvgVolume * 0.8, 1.5); // Caps amplitude at 1.5
+        const cappedExplosiveness = Math.min(cappedAvgVolume * 0.2, 0.8); // Caps explosiveness at 0.6
 
-      renderer.render(scene, camera);
-    };
-    animate();
+        shaderMaterial.uniforms.u_avgVolume.value = cappedAvgVolume;
+        shaderMaterial.uniforms.u_amplitude.value = cappedAmplitude;
+        shaderMaterial.uniforms.u_explosiveness.value = cappedExplosiveness;
+    } else {
+        shaderMaterial.uniforms.u_avgVolume.value = 0.0;
+        shaderMaterial.uniforms.u_amplitude.value = 1.0;
+        shaderMaterial.uniforms.u_explosiveness.value = 0.2;
+    }
+
+    renderer.render(scene, camera);
+};
+animate();
 
     // Resize handler
     const handleResize = () => {
@@ -778,3 +758,4 @@ export function ConsolePage() {
     </div>
   );
 }
+
