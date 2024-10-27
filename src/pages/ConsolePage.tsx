@@ -137,6 +137,10 @@ export function ConsolePage() {
   const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
   const [sound, setSound] = useState<THREE.Audio | null>(null);
   const [analyser, setAnalyser] = useState<THREE.AudioAnalyser | null>(null);
+  const [audioContextInitialized, setAudioContextInitialized] = useState(false);
+
+  // Add new state for audio initialization
+  const [isAudioInitialized, setIsAudioInitialized] = useState(false);
 
   /**
    * Utility for formatting the timing of logs
@@ -177,7 +181,11 @@ export function ConsolePage() {
    */
   const connectConversation = useCallback(async () => {
     const client = clientRef.current;
+    
+    // Always create a new WavRecorder instance when connecting
+    wavRecorderRef.current = new WavRecorder({ sampleRate: 24000 });
     const wavRecorder = wavRecorderRef.current;
+    
     const wavStreamPlayer = wavStreamPlayerRef.current;
 
     // Set state variables
@@ -186,24 +194,28 @@ export function ConsolePage() {
     setRealtimeEvents([]);
     setItems(client.conversation.getItems());
 
-    // Connect to microphone
-    await wavRecorder.begin();
+    try {
+      // Connect to microphone
+      await wavRecorder.begin();
 
-    // Connect to audio output
-    await wavStreamPlayer.connect();
+      // Connect to audio output
+      await wavStreamPlayer.connect();
 
-    // Connect to realtime API
-    await client.connect();
-    client.sendUserMessageContent([
-      {
-        type: `input_text`,
-        text: `Hello!`,
-        // text: `For testing purposes, I want you to list ten car brands. Number each item, e.g. "one (or whatever number you are one): the item name".`
-      },
-    ]);
+      // Connect to realtime API
+      await client.connect();
+      client.sendUserMessageContent([
+        {
+          type: `input_text`,
+          text: `Hello!`,
+        },
+      ]);
 
-    if (client.getTurnDetectionType() === 'server_vad') {
-      await wavRecorder.record((data) => client.appendInputAudio(data.mono));
+      if (client.getTurnDetectionType() === 'server_vad') {
+        await wavRecorder.record((data) => client.appendInputAudio(data.mono));
+      }
+    } catch (error) {
+      console.error("Error connecting:", error);
+      setIsConnected(false);
     }
   }, []);
 
@@ -225,7 +237,10 @@ export function ConsolePage() {
     client.disconnect();
 
     const wavRecorder = wavRecorderRef.current;
-    await wavRecorder.end();
+    // Check if the wavRecorder is in a recording state before ending
+    if (wavRecorder.getStatus() === 'recording') {
+      await wavRecorder.end();
+    }
 
     const wavStreamPlayer = wavStreamPlayerRef.current;
     await wavStreamPlayer.interrupt();
@@ -490,6 +505,30 @@ export function ConsolePage() {
     };
   }, []);
 
+  // Create a function to handle the click on the sphere
+  const handleSphereClick = async () => {
+    if (!isAudioInitialized) {
+      try {
+        // Initialize audio context
+        const newAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        setAudioContext(newAudioContext);
+        
+        // Initialize analyser and other audio components
+        const analyser = newAudioContext.createAnalyser();
+        analyser.fftSize = 256;
+        
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const source = newAudioContext.createMediaStreamSource(stream);
+        source.connect(analyser);
+        
+        setIsAudioInitialized(true);
+      } catch (error) {
+        console.error("Error initializing audio:", error);
+      }
+    }
+  };
+
+  // Modify the sphere creation in the useEffect
   useEffect(() => {
     if (!mountRef.current) return;
 
@@ -502,11 +541,11 @@ export function ConsolePage() {
     renderer.setSize(width, height);
     mountRef.current.appendChild(renderer.domElement);
 
-    camera.position.z = 9;
+    camera.position.z = 10;
 
     // Adjust the second parameter to change the complexity of the sphere
   
-    const geometry = new THREE.IcosahedronGeometry(2, 10);
+    const geometry = new THREE.IcosahedronGeometry(2, 8);
     
     const shaderMaterial = new THREE.ShaderMaterial({
       vertexShader,
@@ -516,15 +555,38 @@ export function ConsolePage() {
         u_amplitude: { value: 1.0 },
         u_explosiveness: { value: 0.5 },
         u_avgVolume: { value: 0.0 },
-        u_color1: { value: new THREE.Color(0x00ff00) }, // Neon green
-        u_color2: { value: new THREE.Color(0xff00ff) }, // Neon pink
+        u_color1: { value: new THREE.Color(0x00ff99) }, // Neon cyan/green
+        u_color2: { value: new THREE.Color(0x0066ff) }, // Neon blue
       },
-      transparent: true,
-      side: THREE.DoubleSide
+      wireframe: true,
+      side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending
     });
 
     const sphere = new THREE.Mesh(geometry, shaderMaterial);
+    
+    // Make the sphere interactive
+    sphere.userData.clickable = true;
     scene.add(sphere);
+
+    // Add click event listener to the renderer's canvas
+    const onClick = (event: MouseEvent) => {
+      const canvas = renderer.domElement;
+      const rect = canvas.getBoundingClientRect();
+      const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+      const raycaster = new THREE.Raycaster();
+      const mouse = new THREE.Vector2(x, y);
+      raycaster.setFromCamera(mouse, camera);
+
+      const intersects = raycaster.intersectObjects(scene.children);
+      if (intersects.length > 0 && intersects[0].object.userData.clickable) {
+        handleSphereClick();
+      }
+    };
+
+    renderer.domElement.addEventListener('click', onClick);
 
     // Audio setup
     let audioContext: AudioContext;
@@ -594,7 +656,7 @@ animate();
         audioContext.close();
       }
     };
-  }, []);
+  }, [isAudioInitialized]); // Add isAudioInitialized to dependencies
 
   const initializeAudio = () => {
     if (!audioContext) {
@@ -646,15 +708,15 @@ animate();
       <div className="content-main">
         <div className="content-logs">
           <div className="content-block events">
-            <div className="visualization" ref={mountRef} style={{ width: '100%', height: '100%' }}>
-              <Button
-                iconPosition="end"
-                icon={isMinimized ? ArrowDown : ArrowUp}
-                buttonStyle="flush"
-                onClick={toggleMinimize}
-                className="minimize-button"
-              />
-            </div>
+            <div 
+              className="visualization" 
+              ref={mountRef} 
+              style={{ 
+                width: '100%', 
+                height: '100%',
+                cursor: isAudioInitialized ? 'default' : 'pointer' 
+              }}
+            />
           </div>
           {!isMinimized && (
             <div className="content-block conversation" style={{ color: 'white' }}>
@@ -758,4 +820,3 @@ animate();
     </div>
   );
 }
-

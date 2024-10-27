@@ -75,14 +75,15 @@ export const vertexShader = `
   }
 
   void main() {
+    vNormal = normalize(normalMatrix * normal);
     vUv = uv;
-    vNormal = normal;
+    vPosition = position;
 
     // Calculate noise based on position and time
     float noise = snoise(position * 2.0 + u_time * 0.5);
 
     // Idle animation: pulsing effect
-    float idlePulse = sin(u_time * 0.5) * 0.1 + 1.0; // Oscillates between 0.9 and 1.1
+    float idlePulse = sin(u_time * 0.5) * 0.1 + 1.0;
 
     // Combine idle animation with audio reactivity
     float combinedAmplitude = mix(idlePulse, u_amplitude, smoothstep(0.0, 0.2, u_avgVolume));
@@ -91,7 +92,6 @@ export const vertexShader = `
     float displacement = noise * u_explosiveness * u_avgVolume;
     vec3 newPosition = position * combinedAmplitude * (1.0 + displacement);
 
-    vPosition = newPosition;
     gl_Position = projectionMatrix * modelViewMatrix * vec4(newPosition, 1.0);
   }
 `;
@@ -101,36 +101,40 @@ export const fragmentShader = `
   uniform float u_amplitude;
   uniform float u_explosiveness;
   uniform float u_avgVolume;
-  uniform vec3 u_color;
+  uniform vec3 u_color1;
+  uniform vec3 u_color2;
 
   varying vec2 vUv;
   varying vec3 vNormal;
   varying vec3 vPosition;
 
-  #define PI 3.1415927
-  #define TWO_PI 6.283185
-
-  float getWireframe(vec3 position, float thickness) {
-    vec3 grid = abs(fract(position - 0.4) - 0.4) / fwidth(position) / thickness;
-    float line = min(min(grid.x, grid.y), grid.z);
-    return 1.0 - min(line, 1.0);
-  }
-
   void main() {
+    // Basic lighting for the white sphere
     vec3 light = normalize(vec3(0.5, 0.2, 1.0));
     float dProd = max(0.0, dot(vNormal, light));
+    vec3 sphereColor = vec3(1.0) * dProd; // White base color
 
-    // Wireframe effect
-    float wireframeDensity = 10.0 + u_avgVolume * 25.0; // Increase density with audio
-    float wireframeThickness = 0.7 - u_avgVolume * 0.5; // Decrease thickness with audio
-    float wire = getWireframe(vPosition * wireframeDensity, wireframeThickness);
+    // Calculate rim glow
+    vec3 viewDirection = normalize(cameraPosition - vPosition);
+    float rimStrength = 1.0 - max(dot(normalize(vNormal), viewDirection), 0.0);
+    rimStrength = pow(rimStrength, 4.0); // Increased power for sharper rim
 
-    // Create colors for sphere
-    vec3 sphereColor = mix(u_color, vec3(1.0), wire * 1.0);
+    // Create pulsing effect for the glow
+    float pulse = sin(u_time * 2.0) * 0.5 + 0.5;
+    
+    // Mix glow colors
+    vec3 glowColor = mix(u_color1, u_color2, pulse);
+    
+    // Calculate glow strength
+    float glowStrength = rimStrength * (0.5 + pulse * 0.5);
+    glowStrength += u_avgVolume * 0.3; // Add audio reactivity
 
-    // Apply lighting
-    vec3 finalColor = sphereColor * dProd;
+    // Combine sphere and glow
+    vec3 finalColor = sphereColor + glowColor * glowStrength * 2.0;
+    
+    // Set alpha for proper glow effect
+    float alpha = max(0.8, glowStrength); // Solid sphere with glowing rim
 
-    gl_FragColor = vec4(finalColor, 1.0);
+    gl_FragColor = vec4(finalColor, alpha);
   }
 `;
