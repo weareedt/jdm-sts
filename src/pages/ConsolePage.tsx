@@ -720,9 +720,12 @@ animate();
           </div>
           <div className={`chat-window ${isMinimized ? 'minimized' : ''}`}>
             <div className="chat-header" onClick={toggleMinimize}>
-              <div className="header-title">Chat</div>
+              <img src="/src/topic.svg" alt="Topic Icon" className="topic-icon" />
+              {!isMinimized && <div className="header-title">Chat</div>} {/* Only show title when not minimized */}
               <div className="header-controls">
-                <button className="triangle-button">{isMinimized ? 'Expand' : 'Minimize'}</button>
+                <button className="triangle-button">
+                  {isMinimized ? '' : 'Minimize'} {/* Change button text based on state */}
+                </button>
               </div>
             </div>
             {!isMinimized && (
