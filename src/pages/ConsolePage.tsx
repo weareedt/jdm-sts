@@ -541,7 +541,7 @@ export function ConsolePage() {
     renderer.setSize(width, height);
     mountRef.current.appendChild(renderer.domElement);
 
-    camera.position.z = 10;
+    camera.position.z = 14;
 
     // Adjust the second parameter to change the complexity of the sphere
   
@@ -553,7 +553,7 @@ export function ConsolePage() {
       uniforms: {
         u_time: { value: 0.0 },
         u_amplitude: { value: 1.0 },
-        u_explosiveness: { value: 0.5 },
+        u_explosiveness: { value: 0.4 },
         u_avgVolume: { value: 0.0 },
         u_color1: { value: new THREE.Color(0x00ff99) }, // Neon cyan/green
         u_color2: { value: new THREE.Color(0x0066ff) }, // Neon blue
@@ -611,7 +611,7 @@ export function ConsolePage() {
     const animate = () => {
       requestAnimationFrame(animate);
 
-      shaderMaterial.uniforms.u_time.value += 0.01;
+      shaderMaterial.uniforms.u_time.value += 0.009;
 
       if (analyser) {
         const dataArray = new Uint8Array(analyser.frequencyBinCount);
@@ -718,72 +718,80 @@ animate();
               }}
             />
           </div>
-          {!isMinimized && (
-            <div className="content-block conversation" style={{ color: 'white' }}>
-              <div className="content-block-title">conversation</div>
-              <div className="content-block-body" data-conversation-content>
-                {!items.length && `awaiting connection..`}
-                {items.map((conversationItem, i) => {
-                  return (
-                    <div className="conversation-item" key={conversationItem.id}>
-                      <div className={`speaker ${conversationItem.role || ''}`}>
-                        <div>
-                          {(
-                            conversationItem.role || conversationItem.type
-                          ).replaceAll('_', ' ')}
-                        </div>
-                        <div
-                          className="close"
-                          onClick={() =>
-                            deleteConversationItem(conversationItem.id)
-                          }
-                        >
-                          <X />
-                        </div>
-                      </div>
-                      <div className={`speaker-content`} style={{ color: 'white' }}>
-                        {/* tool response */}
-                        {conversationItem.type === 'function_call_output' && (
-                          <div>{conversationItem.formatted.output}</div>
-                        )}
-                        {/* tool call */}
-                        {!!conversationItem.formatted.tool && (
-                          <div>
-                            {conversationItem.formatted.tool.name}(
-                            {conversationItem.formatted.tool.arguments})
-                          </div>
-                        )}
-                        {!conversationItem.formatted.tool &&
-                          conversationItem.role === 'user' && (
-                            <div>
-                              {conversationItem.formatted.transcript ||
-                                (conversationItem.formatted.audio?.length
-                                  ? '(awaiting transcript)'
-                                  : conversationItem.formatted.text ||
-                                    '(item sent)')}
-                            </div>
-                          )}
-                        {!conversationItem.formatted.tool &&
-                          conversationItem.role === 'assistant' && (
-                            <div>
-                              {conversationItem.formatted.transcript ||
-                                conversationItem.formatted.text ||
-                                '(truncated)'}
-                            </div>
-                          )}
-                        {conversationItem.formatted.file && (
-                          <audio
-                            src={conversationItem.formatted.file.url}
-                            controls
-                          />
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+          <div className={`chat-window ${isMinimized ? 'minimized' : ''}`}>
+            <div className="chat-header" onClick={toggleMinimize}>
+              <div className="header-title">Chat</div>
+              <div className="header-controls">
+                <button className="triangle-button">{isMinimized ? 'Expand' : 'Minimize'}</button>
               </div>
             </div>
-          )}
+            {!isMinimized && (
+              <div className="chat-content">
+                <div className="content-block-title">conversation</div>
+                <div className="content-block-body" data-conversation-content>
+                  {!items.length && `awaiting connection..`}
+                  {items.map((conversationItem, i) => {
+                    return (
+                      <div className="conversation-item" key={conversationItem.id}>
+                        <div className={`speaker ${conversationItem.role || ''}`}>
+                          <div>
+                            {(
+                              conversationItem.role || conversationItem.type
+                            ).replaceAll('_', ' ')}
+                          </div>
+                          <div
+                            className="close"
+                            onClick={() =>
+                              deleteConversationItem(conversationItem.id)
+                            }
+                          >
+                            <X />
+                          </div>
+                        </div>
+                        <div className={`speaker-content`} style={{ color: 'white' }}>
+                          {/* tool response */}
+                          {conversationItem.type === 'function_call_output' && (
+                            <div>{conversationItem.formatted.output}</div>
+                          )}
+                          {/* tool call */}
+                          {!!conversationItem.formatted.tool && (
+                            <div>
+                              {conversationItem.formatted.tool.name}(
+                              {conversationItem.formatted.tool.arguments})
+                            </div>
+                          )}
+                          {!conversationItem.formatted.tool &&
+                            conversationItem.role === 'user' && (
+                              <div>
+                                {conversationItem.formatted.transcript ||
+                                  (conversationItem.formatted.audio?.length
+                                    ? '(awaiting transcript)'
+                                    : conversationItem.formatted.text ||
+                                      '(item sent)')}
+                              </div>
+                            )}
+                          {!conversationItem.formatted.tool &&
+                            conversationItem.role === 'assistant' && (
+                              <div>
+                                {conversationItem.formatted.transcript ||
+                                  conversationItem.formatted.text ||
+                                  '(truncated)'}
+                              </div>
+                            )}
+                          {conversationItem.formatted.file && (
+                            <audio
+                              src={conversationItem.formatted.file.url}
+                              controls
+                            />
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
           <div className="content-actions">
             <Toggle
               defaultValue={false}
