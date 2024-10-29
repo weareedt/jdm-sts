@@ -22,7 +22,8 @@ import { WavRenderer } from '../utils/wav_renderer';
 import { X, Edit, Zap, ArrowUp, ArrowDown } from 'react-feather';
 import { Button } from '../components/button/Button';
 import { Toggle } from '../components/toggle/Toggle';
-import { Map } from '../components/Map'; 
+import { Map } from '../components/Map';
+import chatIcon from '../assets/topic.svg'; 
 
 import './ConsolePage.scss';
 import * as THREE from 'three';
@@ -714,23 +715,22 @@ animate();
               style={{ 
                 width: '100%', 
                 height: '100%',
-                cursor: isAudioInitialized ? 'default' : 'pointer' 
               }}
             />
           </div>
           <div className={`chat-window ${isMinimized ? 'minimized' : ''}`}>
             <div className="chat-header" onClick={toggleMinimize}>
-              <img src="/src/topic.svg" alt="Topic Icon" className="topic-icon" />
+              <img src={chatIcon} alt="Topic Icon" className="topic-icon" />
               {!isMinimized && <div className="header-title">Chat</div>} {/* Only show title when not minimized */}
               <div className="header-controls">
                 <button className="triangle-button">
-                  {isMinimized ? '' : 'Minimize'} {/* Change button text based on state */}
+                  {isMinimized ? '' : 'Min'} {/* Change button text based on state */}
                 </button>
               </div>
             </div>
             {!isMinimized && (
               <div className="chat-content">
-                <div className="content-block-title">conversation</div>
+                <div className="content-block-title">Conversation</div>
                 <div className="content-block-body" data-conversation-content>
                   {!items.length && `awaiting connection..`}
                   {items.map((conversationItem, i) => {
