@@ -1,6 +1,5 @@
 import React from 'react';
 import { ConsolePage } from './pages/ConsolePage';
-//import Visualizer from './pages/Visualizer';
 import './App.scss';
 
 

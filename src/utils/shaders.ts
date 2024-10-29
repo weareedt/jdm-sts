@@ -6,7 +6,7 @@ export const vertexShader = `
 
   varying vec2 vUv;
   varying vec3 vNormal;
-  varying vec3 vPosition;
+  varying vec3 vPosition; //Pass position to fragment shader
 
   // Simplex 3D noise function
   vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
@@ -75,24 +75,35 @@ export const vertexShader = `
   }
 
   void main() {
+    // Pass normal and uv to fragment shader
     vNormal = normalize(normalMatrix * normal);
     vUv = uv;
     vPosition = position;
 
-    // Calculate noise based on position and time
-    float noise = snoise(position * 2.0 + u_time * 0.5);
+    // Create a waving effect using sine function
+    float waveAmplitude = 0.06; // Reduced from 0.05
+    float waveFrequency = 2.0; // Reduced from 2.0
+    float waveSpeed = 1.0; // Reduced from 1.0
 
-    // Idle animation: pulsing effect
-    float idlePulse = sin(u_time * 0.5) * 0.1 + 1.0;
+    // Calculate wave displacement in all dimensions for more interesting movement
+    float waveX = sin(position.y * waveFrequency + u_time * waveSpeed) * waveAmplitude;
+    float waveY = cos(position.x * waveFrequency + u_time * waveSpeed) * waveAmplitude;
+    float waveZ = sin(position.z * waveFrequency + u_time * waveSpeed) * waveAmplitude;
+    vec3 waveDisplacement = vec3(waveX, waveY, waveZ);
 
-    // Combine idle animation with audio reactivity
-    float combinedAmplitude = mix(idlePulse, u_amplitude, smoothstep(0.0, 0.2, u_avgVolume));
+    // Calculate noise for reactive animation with reduced intensity
+    float noise = snoise(position + vec3(u_time * 0.8)); // Slowed down noise movement
+    vec3 noiseDisplacement = position * noise * (u_explosiveness * 0.8) * (u_avgVolume * 0.8); // Reduced intensity
 
-    // Apply amplitude, explosiveness, and audio reactivity
-    float displacement = noise * u_explosiveness * u_avgVolume;
-    vec3 newPosition = position * combinedAmplitude * (1.0 + displacement);
+    // Smoother transition between animations
+    float audioInfluence = smoothstep(0.0, 0.6, u_avgVolume); // Increased smoothstep range for gentler transition
 
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(newPosition, 1.0);
+    // Combine wave (idle) and noise (reactive) animations
+    vec3 finalPosition = position;
+    finalPosition += waveDisplacement * (1.0 - audioInfluence * 0.7); // Keep more of the wave animation
+    finalPosition += noiseDisplacement * audioInfluence; // Gentler noise influence
+
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(finalPosition, 1.0);
   }
 `;
 

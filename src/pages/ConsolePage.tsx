@@ -542,11 +542,11 @@ export function ConsolePage() {
     renderer.setSize(width, height);
     mountRef.current.appendChild(renderer.domElement);
 
-    camera.position.z = 14;
+    camera.position.z = 12;
 
     // Adjust the second parameter to change the complexity of the sphere
   
-    const geometry = new THREE.IcosahedronGeometry(2, 8);
+    const geometry = new THREE.IcosahedronGeometry(2, 40);
     
     const shaderMaterial = new THREE.ShaderMaterial({
       vertexShader,
@@ -554,7 +554,7 @@ export function ConsolePage() {
       uniforms: {
         u_time: { value: 0.0 },
         u_amplitude: { value: 1.0 },
-        u_explosiveness: { value: 0.4 },
+        u_explosiveness: { value: 0.3 },
         u_avgVolume: { value: 0.0 },
         u_color1: { value: new THREE.Color(0x00ff99) }, // Neon cyan/green
         u_color2: { value: new THREE.Color(0x0066ff) }, // Neon blue
@@ -612,7 +612,7 @@ export function ConsolePage() {
     const animate = () => {
       requestAnimationFrame(animate);
 
-      shaderMaterial.uniforms.u_time.value += 0.009;
+      shaderMaterial.uniforms.u_time.value += 0.01;
 
       if (analyser) {
         const dataArray = new Uint8Array(analyser.frequencyBinCount);
@@ -621,9 +621,9 @@ export function ConsolePage() {
         const normalizedAverage = average / 255;
 
         // Capped Reactiveness Values
-        const cappedAvgVolume = Math.min(normalizedAverage * 3.0, 1.0); // Caps volume at 0.8
+        const cappedAvgVolume = Math.min(normalizedAverage * 3.0, 1.2); // Caps volume at 0.8
         const cappedAmplitude = Math.min(1.0 + cappedAvgVolume * 0.8, 1.5); // Caps amplitude at 1.5
-        const cappedExplosiveness = Math.min(cappedAvgVolume * 0.2, 0.8); // Caps explosiveness at 0.6
+        const cappedExplosiveness = Math.min(cappedAvgVolume * 0.2, 1.0); // Caps explosiveness at 0.6
 
         shaderMaterial.uniforms.u_avgVolume.value = cappedAvgVolume;
         shaderMaterial.uniforms.u_amplitude.value = cappedAmplitude;
@@ -631,7 +631,7 @@ export function ConsolePage() {
     } else {
         shaderMaterial.uniforms.u_avgVolume.value = 0.0;
         shaderMaterial.uniforms.u_amplitude.value = 1.0;
-        shaderMaterial.uniforms.u_explosiveness.value = 0.2;
+        shaderMaterial.uniforms.u_explosiveness.value = 0.3;
     }
 
     renderer.render(scene, camera);
@@ -658,34 +658,6 @@ animate();
       }
     };
   }, [isAudioInitialized]); // Add isAudioInitialized to dependencies
-
-  const initializeAudio = () => {
-    if (!audioContext) {
-      const newAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      setAudioContext(newAudioContext);
-      const listener = new THREE.AudioListener();
-      const newSound = new THREE.Audio(listener);
-      setSound(newSound);
-      setAnalyser(new THREE.AudioAnalyser(newSound, 32));
-
-      const audioLoader = new THREE.AudioLoader();
-      audioLoader.load('/static/Beats.mp3', (buffer) => {
-        newSound.setBuffer(buffer);
-        newSound.setLoop(true);
-        newSound.setVolume(0.5);
-      });
-    }
-  };
-
-  const handleStartPause = () => {
-    initializeAudio();
-    if (isPlaying && sound) {
-      sound.pause();
-    } else if (sound) {
-      sound.play();
-    }
-    setIsPlaying(!isPlaying);
-  };
 
   /**
    * Render the application
