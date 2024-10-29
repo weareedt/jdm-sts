@@ -1,6 +1,7 @@
 {
   "name": "openai-realtime-console",
   "version": "0.0.0",
+  "homepage": "https://weareedt.github.io/jdm-sts/",
   "type": "module",
   "private": true,
   "dependencies": {
@@ -20,6 +21,7 @@
     "react-dom": "^18.3.1",
     "react-feather": "^2.0.10",
     "react-leaflet": "^4.2.1",
+    "react-router-dom": "^6.27.0",
     "react-scripts": "^5.0.1",
     "sass": "^1.78.0",
     "save": "^2.9.0",
@@ -30,6 +32,8 @@
     "ws": "^8.18.0"
   },
   "scripts": {
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build",
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
@@ -59,6 +63,7 @@
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
     "@types/dat.gui": "^0.7.13",
     "@types/three": "^0.169.0",
+    "gh-pages": "^6.2.0",
     "nodemon": "^3.1.7"
   }
 }
