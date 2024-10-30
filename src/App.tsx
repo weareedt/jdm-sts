@@ -1,22 +1,18 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import {ConsolePage } from './pages/ConsolePage';
+import { ConsolePage } from './pages/ConsolePage';
+//import Visualizer from './pages/Visualizer';
 import './App.scss';
 
 function App() {
   return (
-    <BrowserRouter basename="/jdm-sts">
-      <div className="App">
-        <div className="content-wrapper">
-          <Routes>
-            <Route path="/" element={<ConsolePage />} />
-            {/*<Visualizer />*/}  
-            <Route path="/console" element={<ConsolePage/>} />
-          </Routes>
-        </div>
+    <div className="App">
+      <div className="content-wrapper">
+        {/*<Visualizer />*/}  
+        <ConsolePage />
       </div>
-    </BrowserRouter>
+    </div>
   );
 }
 
 export default App;
+
