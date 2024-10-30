@@ -3,6 +3,7 @@ import { ConsolePage } from './pages/ConsolePage';
 //import Visualizer from './pages/Visualizer';
 import './App.scss';
 
+
 function App() {
   return (
     <div className="App">
