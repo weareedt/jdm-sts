@@ -75,6 +75,7 @@ export function ConsolePage() {
    * - WavRecorder (speech input)
    * - WavStreamPlayer (speech output)
    * - RealtimeClient (API client)
+   * - Toggle Dev Board (ESC Button)
    */
   const wavRecorderRef = useRef<WavRecorder>(
     new WavRecorder({ sampleRate: 24000 })
@@ -92,6 +93,7 @@ export function ConsolePage() {
           }
     )
   );
+  const contentTopRef = useRef<HTMLDivElement | null>(null);
 
   /**
    * References for
@@ -251,6 +253,13 @@ export function ConsolePage() {
     const client = clientRef.current;
     client.deleteItem(id);
   }, []);
+
+  const toggleContentTopDisplay = () => {
+    if (contentTopRef.current) {
+      const currentDisplay = window.getComputedStyle(contentTopRef.current).display;
+      contentTopRef.current.style.display = currentDisplay === 'none' ? 'flex' : 'none';
+    }
+  };
 
   /**
    * In push-to-talk mode, start recording
@@ -529,6 +538,20 @@ export function ConsolePage() {
     }
   };
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => { // Specify the type here
+      if (event.key === 'Escape') {
+        toggleContentTopDisplay();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
   // Modify the sphere creation in the useEffect
   useEffect(() => {
     if (!mountRef.current) return;
@@ -693,7 +716,7 @@ animate();
   
   return (
     <div data-component="ConsolePage">
-      <div className="content-top">
+      <div className="content-top" ref={contentTopRef}>
         <div className="content-api-key">
           {!LOCAL_RELAY_SERVER_URL && (
             <Button
@@ -705,6 +728,17 @@ animate();
             />
           )}
         </div>
+        <div className="action-button" style={{ position: 'absolute', top: '10px', right: '16px' }}>
+              <Button
+                icon={isConnected ? X : Zap}
+                iconPosition={isConnected ? 'end' : 'start'}
+                buttonStyle={isConnected ? 'regular' : 'action'}
+                label={isConnected ? 'disconnect' : 'connect'}
+                onClick={
+                  isConnected ? disconnectConversation : connectConversation
+                }
+              />
+            </div>
       </div>
       <div className="content-main">
         <div className="content-logs">
@@ -826,18 +860,6 @@ animate();
               </div>
             )}
             <div className="spacer" />
-            
-            <div className="action-button" style={{ position: 'absolute', top: '10px', right: '16px' }}>
-              <Button
-                icon={isConnected ? X : Zap}
-                iconPosition={isConnected ? 'end' : 'start'}
-                buttonStyle={isConnected ? 'regular' : 'action'}
-                label={isConnected ? 'disconnect' : 'connect'}
-                onClick={
-                  isConnected ? disconnectConversation : connectConversation
-                }
-              />
-            </div>
           </div>
         </div>
       </div>
