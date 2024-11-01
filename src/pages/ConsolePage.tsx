@@ -133,7 +133,7 @@ export function ConsolePage() {
   const [audioData, setAudioData] = useState(new Uint8Array(0));
 
   // Add state for minimizing chat
-  const [isMinimized, setIsMinimized] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(true);
 
   const mountRef = useRef<HTMLDivElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
