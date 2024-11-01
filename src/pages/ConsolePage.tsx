@@ -849,15 +849,14 @@ animate();
             </div>
             <div className="spacer" />
             {isConnected && canPushToTalk && (
-              <div className="push-to-talk-button"> {/* Add a wrapper div here */}
               <Button
-                label={isRecording ? 'release to send' : 'push to talk'}
+                className="push-to-talk"
+                label={isRecording ? 'Release to send' : 'Push to talk'}
                 buttonStyle={isRecording ? 'alert' : 'regular'}
                 disabled={!isConnected || !canPushToTalk}
                 onMouseDown={startRecording}
                 onMouseUp={stopRecording}
               />
-              </div>
             )}
             <div className="spacer" />
           </div>
