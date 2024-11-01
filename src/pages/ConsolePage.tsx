@@ -717,18 +717,14 @@ animate();
                 height: '100%',
               }}
               >
-                {/* Overlay log text */}
-                <div className="overlay-log" style={{
-                  position: 'absolute',
-                  top: '10px', // Adjust based on where you want the text
-                  left: '10px',
-                  color: 'white',
-                  backgroundColor: 'rgba(0, 0, 0, 0.5)', // Optional background for readability
-                  padding: '5px',
-                  borderRadius: '4px'
-                }}>
-                  Log: Visualization Loaded
-                </div>
+                {/* Centered overlay log text displaying the last assistant's message */}
+                  {items.length > 0 && items[items.length - 1].role === 'assistant' && (
+                    <div className="overlay-log">
+                      {items[items.length - 1].formatted.transcript ||
+                        items[items.length - 1].formatted.text ||
+                        '(No content available)'}
+                    </div>
+                  )}
               </div>
             </div>
           <div className={`chat-window ${isMinimized ? 'minimized' : ''}`}>

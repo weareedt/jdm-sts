@@ -472,3 +472,16 @@ audio {
   height: 30px;
 }
 
+.overlay-log {
+  position: absolute;
+  top: 70%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  background-color: rgba(0, 0, 0, 0.5); /* Optional background for readability */
+  padding: 5px 10px;
+  border-radius: 4px;
+  text-align: center;
+}
+
+
