@@ -81,7 +81,7 @@ export const vertexShader = `
     vPosition = position;
 
     // Create a waving effect using sine function
-    float waveAmplitude = 0.06; // Reduced from 0.05
+    float waveAmplitude = 0.03; // Reduced from 0.05
     float waveFrequency = 2.0; // Reduced from 2.0
     float waveSpeed = 1.0; // Reduced from 1.0
 
@@ -119,6 +119,13 @@ export const fragmentShader = `
   varying vec3 vNormal;
   varying vec3 vPosition;
 
+  // Add bloom helper function
+  vec3 applyBloom(vec3 color, float threshold, float intensity) {
+    float brightness = dot(color, vec3(0.2126, 0.7152, 0.0722));
+    float contribution = max(0.0, brightness - threshold) * intensity;
+    return color + (color * contribution);
+  }
+
   void main() {
     // Basic lighting for the white sphere
     vec3 light = normalize(vec3(0.5, 0.2, 1.0));
@@ -136,7 +143,7 @@ export const fragmentShader = `
     vec3 glowColor = mix(u_color1, u_color2, pulse);
     
     // Calculate glow strength with increased intensity
-    float glowStrength = rimStrength * (0.8 + pulse * 0.7);
+    float glowStrength = rimStrength * (0.9 + pulse * 0.8);
     glowStrength += u_avgVolume * 0.15; // Increased audio reactivity
 
     // Combine sphere and glow with increased intensity

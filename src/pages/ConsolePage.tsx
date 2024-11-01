@@ -569,7 +569,7 @@ export function ConsolePage() {
 
     // Adjust the second parameter to change the complexity of the sphere
   
-    const geometry = new THREE.IcosahedronGeometry(2, 8);
+    const geometry = new THREE.IcosahedronGeometry(2, 50);
     
     const shaderMaterial = new THREE.ShaderMaterial({
       vertexShader,
@@ -577,7 +577,7 @@ export function ConsolePage() {
       uniforms: {
         u_time: { value: 0.0 },
         u_amplitude: { value: 1.0 },
-        u_explosiveness: { value: 0.4 },
+        u_explosiveness: { value: 0.5 },
         u_avgVolume: { value: 0.0 },
         u_color1: { value: new THREE.Color(0x00ff99) }, // Neon cyan/green
         u_color2: { value: new THREE.Color(0x0066ff) }, // Neon blue
@@ -635,7 +635,7 @@ export function ConsolePage() {
     const animate = () => {
       requestAnimationFrame(animate);
 
-      shaderMaterial.uniforms.u_time.value += 0.009;
+      shaderMaterial.uniforms.u_time.value += 0.01;
 
       if (analyser) {
         const dataArray = new Uint8Array(analyser.frequencyBinCount);
