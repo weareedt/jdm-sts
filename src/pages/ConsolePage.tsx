@@ -75,6 +75,7 @@ export function ConsolePage() {
    * - WavRecorder (speech input)
    * - WavStreamPlayer (speech output)
    * - RealtimeClient (API client)
+   * - Toggle Dev Board (ESC Button)
    */
   const wavRecorderRef = useRef<WavRecorder>(
     new WavRecorder({ sampleRate: 24000 })
@@ -92,6 +93,7 @@ export function ConsolePage() {
           }
     )
   );
+  const contentTopRef = useRef<HTMLDivElement | null>(null);
 
   /**
    * References for
@@ -251,6 +253,13 @@ export function ConsolePage() {
     const client = clientRef.current;
     client.deleteItem(id);
   }, []);
+
+  const toggleContentTopDisplay = () => {
+    if (contentTopRef.current) {
+      const currentDisplay = window.getComputedStyle(contentTopRef.current).display;
+      contentTopRef.current.style.display = currentDisplay === 'none' ? 'flex' : 'none';
+    }
+  };
 
   /**
    * In push-to-talk mode, start recording
@@ -529,6 +538,20 @@ export function ConsolePage() {
     }
   };
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => { // Specify the type here
+      if (event.key === 'Escape') {
+        toggleContentTopDisplay();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
   // Modify the sphere creation in the useEffect
   useEffect(() => {
     if (!mountRef.current) return;
@@ -693,7 +716,7 @@ animate();
   
   return (
     <div data-component="ConsolePage">
-      <div className="content-top">
+      <div className="content-top" ref={contentTopRef}>
         <div className="content-api-key">
           {!LOCAL_RELAY_SERVER_URL && (
             <Button
@@ -705,6 +728,17 @@ animate();
             />
           )}
         </div>
+        <div className="action-button" style={{ position: 'absolute', top: '10px', right: '16px' }}>
+              <Button
+                icon={isConnected ? X : Zap}
+                iconPosition={isConnected ? 'end' : 'start'}
+                buttonStyle={isConnected ? 'regular' : 'action'}
+                label={isConnected ? 'disconnect' : 'connect'}
+                onClick={
+                  isConnected ? disconnectConversation : connectConversation
+                }
+              />
+            </div>
       </div>
       <div className="content-main">
         <div className="content-logs">
@@ -717,18 +751,14 @@ animate();
                 height: '100%',
               }}
               >
-                {/* Overlay log text */}
-                <div className="overlay-log" style={{
-                  position: 'absolute',
-                  top: '10px', // Adjust based on where you want the text
-                  left: '10px',
-                  color: 'white',
-                  backgroundColor: 'rgba(0, 0, 0, 0.5)', // Optional background for readability
-                  padding: '5px',
-                  borderRadius: '4px'
-                }}>
-                  Log: Visualization Loaded
-                </div>
+                {/* Centered overlay log text displaying the last assistant's message */}
+                  {items.length > 0 && items[items.length - 1].role === 'assistant' && (
+                    <div className="overlay-log">
+                      {items[items.length - 1].formatted.transcript ||
+                        items[items.length - 1].formatted.text ||
+                        '(No content available)'}
+                    </div>
+                  )}
               </div>
             </div>
           <div className={`chat-window ${isMinimized ? 'minimized' : ''}`}>
@@ -809,14 +839,17 @@ animate();
             )}
           </div>
           <div className="content-actions">
-            <Toggle
-              defaultValue={false}
-              labels={['manual', 'vad']}
-              values={['none', 'server_vad']}
-              onChange={(_, value) => changeTurnEndType(value)}
-            />
+            <div className="toggle-container"> {/* Add a wrapper div here */}
+              <Toggle
+                defaultValue={false}
+                labels={['manual', 'vad']}
+                values={['none', 'server_vad']}
+                onChange={(_, value) => changeTurnEndType(value)}
+              />
+            </div>
             <div className="spacer" />
             {isConnected && canPushToTalk && (
+              <div className="push-to-talk-button"> {/* Add a wrapper div here */}
               <Button
                 label={isRecording ? 'release to send' : 'push to talk'}
                 buttonStyle={isRecording ? 'alert' : 'regular'}
@@ -824,20 +857,9 @@ animate();
                 onMouseDown={startRecording}
                 onMouseUp={stopRecording}
               />
+              </div>
             )}
             <div className="spacer" />
-            
-            <div className="action-button" style={{ position: 'absolute', top: '10px', right: '16px' }}>
-              <Button
-                icon={isConnected ? X : Zap}
-                iconPosition={isConnected ? 'end' : 'start'}
-                buttonStyle={isConnected ? 'regular' : 'action'}
-                label={isConnected ? 'disconnect' : 'connect'}
-                onClick={
-                  isConnected ? disconnectConversation : connectConversation
-                }
-              />
-            </div>
           </div>
         </div>
       </div>
