@@ -489,8 +489,9 @@ audio {
   bottom: 20px;
 }
 
-.push-to-talk-button{
+.push-to-talk{
   position: fixed;
   bottom: 20px;
+  z-index: 1000; 
 }
 
