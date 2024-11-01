@@ -123,28 +123,30 @@ export const fragmentShader = `
     // Basic lighting for the white sphere
     vec3 light = normalize(vec3(0.5, 0.2, 1.0));
     float dProd = max(0.0, dot(vNormal, light));
-    vec3 sphereColor = vec3(1.0) * dProd; // White base color
+    vec3 sphereColor = vec3(1.0) * dProd;
 
     // Calculate rim glow
     vec3 viewDirection = normalize(cameraPosition - vPosition);
     float rimStrength = 1.0 - max(dot(normalize(vNormal), viewDirection), 0.0);
-    rimStrength = pow(rimStrength, 4.0); // Increased power for sharper rim
 
     // Create pulsing effect for the glow
-    float pulse = sin(u_time * 2.0) * 0.5 + 0.5;
+    float pulse = sin(u_time * 2.0) * 0.5;
     
     // Mix glow colors
     vec3 glowColor = mix(u_color1, u_color2, pulse);
     
-    // Calculate glow strength
-    float glowStrength = rimStrength * (0.5 + pulse * 0.5);
-    glowStrength += u_avgVolume * 0.3; // Add audio reactivity
+    // Calculate glow strength with increased intensity
+    float glowStrength = rimStrength * (0.8 + pulse * 0.7);
+    glowStrength += u_avgVolume * 0.15; // Increased audio reactivity
 
-    // Combine sphere and glow
-    vec3 finalColor = sphereColor + glowColor * glowStrength * 2.0;
+    // Combine sphere and glow with increased intensity
+    vec3 finalColor = sphereColor + glowColor * glowStrength * 2.5;
+    
+    // Apply bloom effect
+    finalColor = applyBloom(finalColor, 0.6, 1.5);
     
     // Set alpha for proper glow effect
-    float alpha = max(0.8, glowStrength); // Solid sphere with glowing rim
+    float alpha = max(0.8, glowStrength);
 
     gl_FragColor = vec4(finalColor, alpha);
   }
