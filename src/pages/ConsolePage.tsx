@@ -805,14 +805,17 @@ animate();
             )}
           </div>
           <div className="content-actions">
-            <Toggle
-              defaultValue={false}
-              labels={['manual', 'vad']}
-              values={['none', 'server_vad']}
-              onChange={(_, value) => changeTurnEndType(value)}
-            />
+            <div className="toggle-container"> {/* Add a wrapper div here */}
+              <Toggle
+                defaultValue={false}
+                labels={['manual', 'vad']}
+                values={['none', 'server_vad']}
+                onChange={(_, value) => changeTurnEndType(value)}
+              />
+            </div>
             <div className="spacer" />
             {isConnected && canPushToTalk && (
+              <div className="push-to-talk-button"> {/* Add a wrapper div here */}
               <Button
                 label={isRecording ? 'release to send' : 'push to talk'}
                 buttonStyle={isRecording ? 'alert' : 'regular'}
@@ -820,6 +823,7 @@ animate();
                 onMouseDown={startRecording}
                 onMouseUp={stopRecording}
               />
+              </div>
             )}
             <div className="spacer" />
             

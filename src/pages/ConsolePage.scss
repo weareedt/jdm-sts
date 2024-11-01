@@ -140,8 +140,7 @@
         align-items: center;
         justify-content: center;
         gap: 14px;
-        .push-to-talk-button {
-          padding: 8px 16px;
+          .push-to-talk-button {
           border-radius: 4px;
           transition: background-color 0.3s ease;
           
@@ -484,4 +483,14 @@ audio {
   text-align: center;
 }
 
+.toggle-container {
+  position: fixed;
+  left: 20px;
+  bottom: 20px;
+}
+
+.push-to-talk-button{
+  position: fixed;
+  bottom: 20px;
+}
 
