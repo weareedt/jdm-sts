@@ -716,8 +716,21 @@ animate();
                 width: '100%', 
                 height: '100%',
               }}
-            />
-          </div>
+              >
+                {/* Overlay log text */}
+                <div className="overlay-log" style={{
+                  position: 'absolute',
+                  top: '10px', // Adjust based on where you want the text
+                  left: '10px',
+                  color: 'white',
+                  backgroundColor: 'rgba(0, 0, 0, 0.5)', // Optional background for readability
+                  padding: '5px',
+                  borderRadius: '4px'
+                }}>
+                  Log: Visualization Loaded
+                </div>
+              </div>
+            </div>
           <div className={`chat-window ${isMinimized ? 'minimized' : ''}`}>
             <div className="chat-header" onClick={toggleMinimize}>
               <img src={chatIcon} alt="Topic Icon" className="topic-icon"/>
