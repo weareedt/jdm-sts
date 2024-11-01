@@ -8,8 +8,8 @@
   font-weight: 400;
   font-style: normal;
   border: none;
-  background-color: #ececf1;
-  color: white;
+  background-color: #333;
+  color: #ffffff;
   border-radius: 1000px;
   padding: 8px 24px;
   min-height: 42px;
@@ -20,7 +20,13 @@
     background-color: #101010;
     color: #ececf1;
     &:hover:not([disabled]) {
-      background-color: #404040;
+      background-color: #d8d8d8;
+      color: #333;
+    }
+    &:active:not([disabled]) {
+      background-color: #333;
+      color: #00fff4;
+      transform: translateY(1px);
     }
   }
 
@@ -42,9 +48,12 @@
 
   &:hover:not([disabled]) {
     background-color: #d8d8d8;
+    color: #333;
   }
 
   &:active:not([disabled]) {
+    background-color: #333;
+    color: #00fff4;
     transform: translateY(1px);
   }
 
@@ -78,14 +87,15 @@
   }
 
   &.button-style-flush {
-    background-color: #28817e;
-    color: #000;
+    background-color: #333;
+    color: #ffffff;
     border: 0.5px solid #000;
     &:hover:not([disabled]) {
-      background-color: #00fff4;
+      background-color: #bebebe;
+      color: #333;
     }
     &:active:not([disabled]) {
-      background-color: #000;
+      background-color: #333;
       color: #00fff4;
       transform: translateY(1px);
     }
