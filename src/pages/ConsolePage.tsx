@@ -570,19 +570,28 @@ export function ConsolePage() {
     // Adjust the second parameter to change the complexity of the sphere
   
     const geometry = new THREE.IcosahedronGeometry(2, 50);
+    const geometry = new THREE.IcosahedronGeometry(2, 10);
     
     const shaderMaterial = new THREE.ShaderMaterial({
       vertexShader,
       fragmentShader,
       uniforms: {
         u_time: { value: 0.0 },
-        u_amplitude: { value: 1.0 },
-        u_explosiveness: { value: 0.5 },
+        u_amplitude: { value: 0.0 },
+        u_explosiveness: { value: 0.0 },
         u_avgVolume: { value: 0.0 },
-        u_color1: { value: new THREE.Color(0x00ff99) }, // Neon cyan/green
-        u_color2: { value: new THREE.Color(0x0066ff) }, // Neon blue
+        // Option 1: Change color to a gradient effect
+        //u_color1: { value: new THREE.Color(0xff0000) }, // Red
+        //u_color2: { value: new THREE.Color(0x0000ff) }, // Blue
+        // Option 2: Change color to a pulsating effect
+        //u_color1: { value: new THREE.Color(0x00ff99) }, // Neon cyan/green
+        //u_color2: { value: new THREE.Color(0x0066ff) }, // Neon blue
+        // Option 3: Change color to a static color
+        u_color1: { value: new THREE.Color(0xffff00) }, // Yellow
+        u_color2: { value: new THREE.Color(0xffff00) }, // Yellow
       },
       wireframe: true,
+      //transparent: true,
       side: THREE.DoubleSide,
       blending: THREE.AdditiveBlending
     });
@@ -643,19 +652,54 @@ export function ConsolePage() {
         const average = dataArray.reduce((sum, value) => sum + value, 0) / dataArray.length;
         const normalizedAverage = average / 255;
 
-        // Capped Reactiveness Values
-        const cappedAvgVolume = Math.min(normalizedAverage * 3.0, 1.0); // Caps volume at 0.8
-        const cappedAmplitude = Math.min(1.0 + cappedAvgVolume * 0.8, 1.5); // Caps amplitude at 1.5
-        const cappedExplosiveness = Math.min(cappedAvgVolume * 0.2, 0.8); // Caps explosiveness at 0.6
+        // Define animation styles
+        const calmAndSmooth = () => {
+          shaderMaterial.uniforms.u_avgVolume.value = normalizedAverage;
+          shaderMaterial.uniforms.u_amplitude.value = 1.0; // Smooth amplitude
+          shaderMaterial.uniforms.u_explosiveness.value = 0.3; // Low explosiveness
+        };
 
-        shaderMaterial.uniforms.u_avgVolume.value = cappedAvgVolume;
-        shaderMaterial.uniforms.u_amplitude.value = cappedAmplitude;
-        shaderMaterial.uniforms.u_explosiveness.value = cappedExplosiveness;
-    } else {
+        const moderate = () => {
+          shaderMaterial.uniforms.u_avgVolume.value = normalizedAverage;
+          shaderMaterial.uniforms.u_amplitude.value = Math.min(1.0 + normalizedAverage * 0.8, 0.3); // Moderate amplitude
+          shaderMaterial.uniforms.u_explosiveness.value = 0.8;
+        };
+
+        const sharpAndAggressive = () => {
+          shaderMaterial.uniforms.u_avgVolume.value = normalizedAverage;
+          shaderMaterial.uniforms.u_amplitude.value = Math.min(1.0 + normalizedAverage * 2.0, 5.0); // High amplitude
+          shaderMaterial.uniforms.u_explosiveness.value = 2.0; // High explosiveness
+        };
+
+        const differentAnimationSet = () => {
+          shaderMaterial.uniforms.u_avgVolume.value = normalizedAverage;
+          shaderMaterial.uniforms.u_amplitude.value = Math.sin(normalizedAverage * Math.PI) * 1.5; // Sine wave based amplitude
+          shaderMaterial.uniforms.u_explosiveness.value = Math.cos(normalizedAverage * Math.PI) * 0.5; // Cosine wave based explosiveness
+        };
+
+        // Choose the animation style based on a condition
+        const animationStyle: number = 2; // Change this value to switch between styles (1-4)
+        switch (animationStyle) {
+          case 1:
+            calmAndSmooth();
+            break;
+          case 2:
+            moderate();
+            break;
+          case 3:
+            sharpAndAggressive();
+            break;
+          case 4:
+            differentAnimationSet();
+            break;
+          default:
+            calmAndSmooth(); // Fallback to the first style
+        }
+      } else {
         shaderMaterial.uniforms.u_avgVolume.value = 0.0;
         shaderMaterial.uniforms.u_amplitude.value = 1.0;
         shaderMaterial.uniforms.u_explosiveness.value = 0.2;
-    }
+      }
 
     renderer.render(scene, camera);
 };

@@ -6,7 +6,7 @@ export const vertexShader = `
 
   varying vec2 vUv;
   varying vec3 vNormal;
-  varying vec3 vPosition; //Pass position to fragment shader
+  varying vec3 vPosition; // Pass position to fragment shader
 
   // Simplex 3D noise function
   vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
@@ -75,33 +75,27 @@ export const vertexShader = `
   }
 
   void main() {
-    // Pass normal and uv to fragment shader
     vNormal = normalize(normalMatrix * normal);
     vUv = uv;
     vPosition = position;
 
-    // Create a waving effect using sine function
-    float waveAmplitude = 0.03; // Reduced from 0.05
-    float waveFrequency = 2.0; // Reduced from 2.0
-    float waveSpeed = 1.0; // Reduced from 1.0
+    float waveAmplitude = 0.03;
+    float waveFrequency = 2.0;
+    float waveSpeed = 1.0;
 
-    // Calculate wave displacement in all dimensions for more interesting movement
     float waveX = sin(position.y * waveFrequency + u_time * waveSpeed) * waveAmplitude;
     float waveY = cos(position.x * waveFrequency + u_time * waveSpeed) * waveAmplitude;
     float waveZ = sin(position.z * waveFrequency + u_time * waveSpeed) * waveAmplitude;
     vec3 waveDisplacement = vec3(waveX, waveY, waveZ);
 
-    // Calculate noise for reactive animation with reduced intensity
-    float noise = snoise(position + vec3(u_time * 0.8)); // Slowed down noise movement
-    vec3 noiseDisplacement = position * noise * (u_explosiveness * 0.8) * (u_avgVolume * 0.8); // Reduced intensity
+    float noise = snoise(position + vec3(u_time * 0.8));
+    vec3 noiseDisplacement = position * noise * (u_explosiveness * 0.8) * (u_avgVolume * 0.8);
 
-    // Smoother transition between animations
-    float audioInfluence = smoothstep(0.0, 0.6, u_avgVolume); // Increased smoothstep range for gentler transition
+    float audioInfluence = smoothstep(0.0, 0.6, u_avgVolume);
 
-    // Combine wave (idle) and noise (reactive) animations
     vec3 finalPosition = position;
-    finalPosition += waveDisplacement * (1.0 - audioInfluence * 0.7); // Keep more of the wave animation
-    finalPosition += noiseDisplacement * audioInfluence; // Gentler noise influence
+    finalPosition += waveDisplacement * (1.0 - audioInfluence * 0.7);
+    finalPosition += noiseDisplacement * audioInfluence;
 
     gl_Position = projectionMatrix * modelViewMatrix * vec4(finalPosition, 1.0);
   }
@@ -114,45 +108,27 @@ export const fragmentShader = `
   uniform float u_avgVolume;
   uniform vec3 u_color1;
   uniform vec3 u_color2;
+  uniform vec3 u_staticColor; // Static color added
 
   varying vec2 vUv;
-  varying vec3 vNormal;
   varying vec3 vPosition;
-
-  // Add bloom helper function
-  vec3 applyBloom(vec3 color, float threshold, float intensity) {
-    float brightness = dot(color, vec3(0.2126, 0.7152, 0.0722));
-    float contribution = max(0.0, brightness - threshold) * intensity;
-    return color + (color * contribution);
-  }
+  varying vec3 vNormal;
 
   void main() {
-    // Basic lighting for the white sphere
-    vec3 light = normalize(vec3(0.5, 0.2, 1.0));
-    float dProd = max(0.0, dot(vNormal, light));
-    vec3 sphereColor = vec3(1.0) * dProd;
+    float pulsate = sin(u_time * 2.0) * 0.5 + 0.5;
+    vec3 finalColor = u_staticColor * pulsate;
 
-    // Calculate rim glow
     vec3 viewDirection = normalize(cameraPosition - vPosition);
     float rimStrength = 1.0 - max(dot(normalize(vNormal), viewDirection), 0.0);
 
-    // Create pulsing effect for the glow
     float pulse = sin(u_time * 2.0) * 0.5;
-    
-    // Mix glow colors
     vec3 glowColor = mix(u_color1, u_color2, pulse);
-    
-    // Calculate glow strength with increased intensity
-    float glowStrength = rimStrength * (0.9 + pulse * 0.8);
-    glowStrength += u_avgVolume * 0.15; // Increased audio reactivity
 
-    // Combine sphere and glow with increased intensity
-    vec3 finalColor = sphereColor + glowColor * glowStrength * 2.5;
-    
-    // Apply bloom effect
-    finalColor = applyBloom(finalColor, 0.6, 1.5);
-    
-    // Set alpha for proper glow effect
+    float glowStrength = rimStrength * (0.9 + pulse * 0.8);
+    glowStrength += u_avgVolume * 0.15;
+
+    finalColor += glowColor * glowStrength * 2.5;
+
     float alpha = max(0.8, glowStrength);
 
     gl_FragColor = vec4(finalColor, alpha);
