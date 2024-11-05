@@ -145,6 +145,10 @@ export function ConsolePage() {
   // Add new state for audio initialization
   const [isAudioInitialized, setIsAudioInitialized] = useState(false);
 
+  const [isColorControlVisible, setIsColorControlVisible] = useState(true);
+
+  const [animationColor, setAnimationColor] = useState('#ffff00');
+
   /**
    * Utility for formatting the timing of logs
    */
@@ -538,10 +542,16 @@ export function ConsolePage() {
     }
   };
 
+  // Function to toggle color control visibility
+  const toggleColorControl = () => {
+    setIsColorControlVisible((prev) => !prev);
+  };
+
   useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => { // Specify the type here
+    const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         toggleContentTopDisplay();
+        toggleColorControl();
       }
     };
 
@@ -552,8 +562,31 @@ export function ConsolePage() {
     };
   }, []);
 
-  // Modify the sphere creation in the useEffect
+  // Function to handle color change
+  const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedColor = e.target.value;
+    setAnimationColor(selectedColor);
+
+    const rgbColor = new THREE.Color(selectedColor);
+    if (shaderMaterialRef.current) {
+      shaderMaterialRef.current.uniforms.u_color1.value.setRGB(
+        rgbColor.r,
+        rgbColor.g,
+        rgbColor.b
+      );
+      shaderMaterialRef.current.uniforms.u_color2.value.setRGB(
+        rgbColor.r,
+        rgbColor.g,
+        rgbColor.b
+      );
+    }
+  };
+
+  // Create a ref for the shader material
+  const shaderMaterialRef = useRef<THREE.ShaderMaterial | null>(null);
+
   useEffect(() => {
+    // Modify the sphere creation in the useEffect
     if (!mountRef.current) return;
 
     const width = mountRef.current.clientWidth;
@@ -567,9 +600,6 @@ export function ConsolePage() {
 
     camera.position.z = 14;
 
-    // Adjust the second parameter to change the complexity of the sphere
-  
-    const geometry = new THREE.IcosahedronGeometry(2, 50);
     const geometry = new THREE.IcosahedronGeometry(2, 10);
     
     const shaderMaterial = new THREE.ShaderMaterial({
@@ -580,15 +610,8 @@ export function ConsolePage() {
         u_amplitude: { value: 0.0 },
         u_explosiveness: { value: 0.0 },
         u_avgVolume: { value: 0.0 },
-        // Option 1: Change color to a gradient effect
-        //u_color1: { value: new THREE.Color(0xff0000) }, // Red
-        //u_color2: { value: new THREE.Color(0x0000ff) }, // Blue
-        // Option 2: Change color to a pulsating effect
-        //u_color1: { value: new THREE.Color(0x00ff99) }, // Neon cyan/green
-        //u_color2: { value: new THREE.Color(0x0066ff) }, // Neon blue
-        // Option 3: Change color to a static color
-        u_color1: { value: new THREE.Color(0xffff00) }, // Yellow
-        u_color2: { value: new THREE.Color(0xffff00) }, // Yellow
+        u_color1: { value: new THREE.Color(animationColor) },
+        u_color2: { value: new THREE.Color(animationColor) },
       },
       wireframe: true,
       //transparent: true,
@@ -596,9 +619,9 @@ export function ConsolePage() {
       blending: THREE.AdditiveBlending
     });
 
+    shaderMaterialRef.current = shaderMaterial;
+
     const sphere = new THREE.Mesh(geometry, shaderMaterial);
-    
-    // Make the sphere interactive
     sphere.userData.clickable = true;
     scene.add(sphere);
 
@@ -641,6 +664,12 @@ export function ConsolePage() {
 
     initAudio();
 
+    const updateGeometry = (detail: number) => {
+      const newGeometry = new THREE.IcosahedronGeometry(2, detail);
+      sphere.geometry.dispose(); // Dispose of the old geometry
+      sphere.geometry = newGeometry; // Assign the new geometry
+    };
+
     const animate = () => {
       requestAnimationFrame(animate);
 
@@ -655,30 +684,30 @@ export function ConsolePage() {
         // Define animation styles
         const calmAndSmooth = () => {
           shaderMaterial.uniforms.u_avgVolume.value = normalizedAverage;
-          shaderMaterial.uniforms.u_amplitude.value = 1.0; // Smooth amplitude
-          shaderMaterial.uniforms.u_explosiveness.value = 0.3; // Low explosiveness
+          shaderMaterial.uniforms.u_amplitude.value = 1.0;
+          shaderMaterial.uniforms.u_explosiveness.value = 0.6;
+          updateColor(140); // Green
+          updateGeometry(5); // 5 polygons
         };
 
         const moderate = () => {
           shaderMaterial.uniforms.u_avgVolume.value = normalizedAverage;
-          shaderMaterial.uniforms.u_amplitude.value = Math.min(1.0 + normalizedAverage * 0.8, 0.3); // Moderate amplitude
-          shaderMaterial.uniforms.u_explosiveness.value = 0.8;
+          shaderMaterial.uniforms.u_amplitude.value = Math.min(1.0 + normalizedAverage * 0.8, 0.3);
+          shaderMaterial.uniforms.u_explosiveness.value = 0.6;
+          updateColor(140); // Light Green
+          updateGeometry(25); // 20 polygons
         };
 
         const sharpAndAggressive = () => {
           shaderMaterial.uniforms.u_avgVolume.value = normalizedAverage;
-          shaderMaterial.uniforms.u_amplitude.value = Math.min(1.0 + normalizedAverage * 2.0, 5.0); // High amplitude
-          shaderMaterial.uniforms.u_explosiveness.value = 2.0; // High explosiveness
-        };
-
-        const differentAnimationSet = () => {
-          shaderMaterial.uniforms.u_avgVolume.value = normalizedAverage;
-          shaderMaterial.uniforms.u_amplitude.value = Math.sin(normalizedAverage * Math.PI) * 1.5; // Sine wave based amplitude
-          shaderMaterial.uniforms.u_explosiveness.value = Math.cos(normalizedAverage * Math.PI) * 0.5; // Cosine wave based explosiveness
+          shaderMaterial.uniforms.u_amplitude.value = Math.min(1.0 + normalizedAverage * 2.0, 2.0);
+          shaderMaterial.uniforms.u_explosiveness.value = 1.2;
+          updateColor(140); // Dark Green
+          updateGeometry(30); // 15 polygons
         };
 
         // Choose the animation style based on a condition
-        const animationStyle: number = 2; // Change this value to switch between styles (1-4)
+        const animationStyle: number = 3; // Change this value to switch between styles (1-4)
         switch (animationStyle) {
           case 1:
             calmAndSmooth();
@@ -689,11 +718,9 @@ export function ConsolePage() {
           case 3:
             sharpAndAggressive();
             break;
-          case 4:
-            differentAnimationSet();
-            break;
+
           default:
-            calmAndSmooth(); // Fallback to the first style
+            calmAndSmooth();
         }
       } else {
         shaderMaterial.uniforms.u_avgVolume.value = 0.0;
@@ -701,9 +728,18 @@ export function ConsolePage() {
         shaderMaterial.uniforms.u_explosiveness.value = 0.2;
       }
 
-    renderer.render(scene, camera);
-};
-animate();
+      renderer.render(scene, camera);
+    };
+
+    const updateColor = (baseHue: number) => {
+      const hueVariation = (Math.sin(shaderMaterial.uniforms.u_time.value) + 1) * 15; // Vary hue
+      const hue = (baseHue + hueVariation) % 360;
+      const color = new THREE.Color(`hsl(${hue}, 100%, 50%)`);
+      shaderMaterial.uniforms.u_color1.value.set(color);
+      shaderMaterial.uniforms.u_color2.value.set(color);
+    };
+
+    animate();
 
     // Resize handler
     const handleResize = () => {
@@ -724,7 +760,7 @@ animate();
         audioContext.close();
       }
     };
-  }, [isAudioInitialized]); // Add isAudioInitialized to dependencies
+  }, [animationColor]); // Add animationColor to dependencies
 
   const initializeAudio = () => {
     if (!audioContext) {
@@ -760,7 +796,7 @@ animate();
   
   return (
     <div data-component="ConsolePage">
-      <div className="content-top" ref={contentTopRef}>
+      <div className="content-top" ref={contentTopRef} style={{ maxHeight: '60px', overflow: 'hidden' }}>
         <div className="content-api-key">
           {!LOCAL_RELAY_SERVER_URL && (
             <Button
@@ -772,19 +808,21 @@ animate();
             />
           )}
         </div>
+        
         <div className="action-button" style={{ position: 'absolute', top: '10px', right: '16px' }}>
-              <Button
-                icon={isConnected ? X : Zap}
-                iconPosition={isConnected ? 'end' : 'start'}
-                buttonStyle={isConnected ? 'regular' : 'action'}
-                label={isConnected ? 'disconnect' : 'connect'}
-                onClick={
-                  isConnected ? disconnectConversation : connectConversation
-                }
-              />
-            </div>
+          <Button
+            icon={isConnected ? X : Zap}
+            iconPosition={isConnected ? 'end' : 'start'}
+            buttonStyle={isConnected ? 'regular' : 'action'}
+            label={isConnected ? 'disconnect' : 'connect'}
+            onClick={
+              isConnected ? disconnectConversation : connectConversation
+            }
+          />
+        </div>
       </div>
       <div className="content-main">
+  
         <div className="content-logs">
           <div className="content-block events">
             <div 

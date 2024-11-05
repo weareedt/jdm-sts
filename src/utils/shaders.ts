@@ -97,6 +97,10 @@ export const vertexShader = `
     finalPosition += waveDisplacement * (1.0 - audioInfluence * 0.7);
     finalPosition += noiseDisplacement * audioInfluence;
 
+    // Pulsate effect /*can remove for opt 1*/
+    float pulse = sin(u_time + length(finalPosition) * 5.0) * 0.1 * u_amplitude;
+    finalPosition += normalize(vNormal) * pulse;
+
     gl_Position = projectionMatrix * modelViewMatrix * vec4(finalPosition, 1.0);
   }
 `;
@@ -115,22 +119,35 @@ export const fragmentShader = `
   varying vec3 vNormal;
 
   void main() {
-    float pulsate = sin(u_time * 2.0) * 0.5 + 0.5;
-    vec3 finalColor = u_staticColor * pulsate;
+    // Smooth color transition
+    vec3 color = mix(u_color1, u_color2, 0.5 + 0.5 * sin(u_time + vUv.x * 3.14159));
 
-    vec3 viewDirection = normalize(cameraPosition - vPosition);
-    float rimStrength = 1.0 - max(dot(normalize(vNormal), viewDirection), 0.0);
+    // Apply lighting effect
+    float intensity = dot(normalize(vNormal), vec3(0.0, 0.0, 1.0));
+    color *= (0.5 + 0.5 * intensity);
 
-    float pulse = sin(u_time * 2.0) * 0.5;
-    vec3 glowColor = mix(u_color1, u_color2, pulse);
-
-    float glowStrength = rimStrength * (0.9 + pulse * 0.8);
-    glowStrength += u_avgVolume * 0.15;
-
-    finalColor += glowColor * glowStrength * 2.5;
-
-    float alpha = max(0.8, glowStrength);
-
-    gl_FragColor = vec4(finalColor, alpha);
+    gl_FragColor = vec4(color, 1.0);
   }
 `;
+
+/*void main() {
+  float pulsate = sin(u_time * 2.0) * 0.5 + 0.5;
+  vec3 finalColor = u_staticColor * pulsate;
+
+  vec3 viewDirection = normalize(cameraPosition - vPosition);
+  float rimStrength = 1.0 - max(dot(normalize(vNormal), viewDirection), 0.0);
+
+  float pulse = sin(u_time * 2.0) * 0.5;
+  vec3 glowColor = mix(u_color1, u_color2, pulse);
+
+  float glowStrength = rimStrength * (0.9 + pulse * 0.8);
+  glowStrength += u_avgVolume * 0.15;
+
+  finalColor += glowColor * glowStrength * 2.5;
+
+  float alpha = max(0.8, glowStrength);
+
+  gl_FragColor = vec4(finalColor, alpha);
+}
+`;*/
+
