@@ -1,0 +1,14 @@
+{
+  "files": {
+    "main.css": "/jdm-sts/static/css/main.3839c44a.css",
+    "main.js": "/jdm-sts/static/js/main.56f4a136.js",
+    "index.html": "/jdm-sts/index.html",
+    "static/media/topic.svg": "/jdm-sts/static/media/topic.718c4017f66211f49e44ed7aed8e66ef.svg",
+    "main.3839c44a.css.map": "/jdm-sts/static/css/main.3839c44a.css.map",
+    "main.56f4a136.js.map": "/jdm-sts/static/js/main.56f4a136.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.3839c44a.css",
+    "static/js/main.56f4a136.js"
+  ]
+}
