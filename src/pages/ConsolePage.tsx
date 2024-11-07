@@ -692,8 +692,8 @@ export function ConsolePage() {
 
         const moderate = () => {
           shaderMaterial.uniforms.u_avgVolume.value = normalizedAverage;
-          shaderMaterial.uniforms.u_amplitude.value = Math.min(1.0 + normalizedAverage * 0.8, 0.3);
-          shaderMaterial.uniforms.u_explosiveness.value = 0.6;
+          shaderMaterial.uniforms.u_amplitude.value = Math.min(1.0 + normalizedAverage * 0.8, 0.5);
+          shaderMaterial.uniforms.u_explosiveness.value = 0.8;
           updateColor(140); // Light Green
           updateGeometry(25); // 20 polygons
         };
@@ -707,7 +707,7 @@ export function ConsolePage() {
         };
 
         // Choose the animation style based on a condition
-        const animationStyle: number = 3; // Change this value to switch between styles (1-4)
+        const animationStyle: number = 2; // Change this value to switch between styles (1-4)
         switch (animationStyle) {
           case 1:
             calmAndSmooth();

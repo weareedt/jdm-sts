@@ -112,7 +112,6 @@ export const fragmentShader = `
   uniform float u_avgVolume;
   uniform vec3 u_color1;
   uniform vec3 u_color2;
-  uniform vec3 u_staticColor; // Static color added
 
   varying vec2 vUv;
   varying vec3 vPosition;
