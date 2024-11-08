@@ -1,5 +1,5 @@
 {
-  "homepage": "https://weareedt.github.io/jdm-sts",
+  "homepage": "https://weareedt.github.io/jdm-sts/",
   "name": "openai-realtime-console",
   "version": "0.0.0",
   "type": "module",
@@ -34,9 +34,9 @@
   },
   "scripts": {
     "start": "react-scripts start",
+    "build": "react-scripts build",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d build",
-    "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "zip": "zip -r realtime-api-console.zip . -x 'node_modules' 'node_modules/*' 'node_modules/**' '.git' '.git/*' '.git/**' '.DS_Store' '*/.DS_Store' 'package-lock.json' '*.zip' '*.tar.gz' '*.tar' '.env'",
