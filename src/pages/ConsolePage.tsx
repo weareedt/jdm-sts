@@ -28,6 +28,7 @@ import chatIcon from '../assets/topic.svg';
 import './ConsolePage.scss';
 import * as THREE from 'three';
 import { vertexShader, fragmentShader } from '../utils/shaders';
+import Spline from '@splinetool/react-spline';
 
 /**
  * Type for result from get_weather() function call
@@ -822,25 +823,26 @@ export function ConsolePage() {
         </div>
       </div>
       <div className="content-main">
-  
         <div className="content-logs">
           <div className="content-block events">
-            <div 
-              className="visualization" 
-              ref={mountRef} 
-              style={{ 
-                width: '100%', 
-                height: '100%',
-              }}
-              >
-                {/* Centered overlay log text displaying the last assistant's message */}
-                  {items.length > 0 && items[items.length - 1].role === 'assistant' && (
-                    <div className="overlay-log">
-                      {items[items.length - 1].formatted.transcript ||
-                        items[items.length - 1].formatted.text ||
-                        '(No content available)'}
-                    </div>
-                  )}
+          <div className="spline-container" style={{ position: 'relative', width: '100%', height: '100%' }}>
+          <Spline scene="https://prod.spline.design/zrVulpZcYp9v9dWD/scene.splinecode" />
+        {/* Centered overlay log text displaying the last assistant's message */}
+        {items.length > 0 && items[items.length - 1].role === 'assistant' && (
+          <div className="overlay-log" style={{ 
+            position: 'absolute', 
+            top: '50%', 
+            left: '50%', 
+            transform: 'translate(-50%, -50%)', 
+            color: 'white', 
+            textAlign: 'center', 
+            zIndex: 100 // Ensure this is higher than the Spline component
+          }}>
+            {items[items.length - 1].formatted.transcript ||
+              items[items.length - 1].formatted.text ||
+              '(No content available)'}
+          </div>
+        )}
               </div>
             </div>
           <div className={`chat-window ${isMinimized ? 'minimized' : ''}`}>
