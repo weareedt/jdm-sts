@@ -61,14 +61,14 @@ export function ConsolePage() {
    * Ask user for API Key
    * If we're using the local relay server, we don't need this
    */
-  // const apiKey = LOCAL_RELAY_SERVER_URL
-  //   ? ''
-  //   : localStorage.getItem('tmp::voice_api_key') ||
-  //     prompt('OpenAI API Key') ||
-  //     '';
-  // if (apiKey !== '') {
-  //   localStorage.setItem('tmp::voice_api_key', apiKey);
-  // }
+  const apiKey = LOCAL_RELAY_SERVER_URL
+    ? ''
+    : localStorage.getItem('tmp::voice_api_key') ||
+      prompt('OpenAI API Key') ||
+      '';
+  if (apiKey !== '') {
+    localStorage.setItem('tmp::voice_api_key', apiKey);
+  }
 
   /**
    * Instantiate:
@@ -83,26 +83,18 @@ export function ConsolePage() {
   const wavStreamPlayerRef = useRef<WavStreamPlayer>(
     new WavStreamPlayer({ sampleRate: 24000 })
   );
-  
-  const apiKey = process.env.REACT_APP_OPENAI_API_KEY;
-  const relayUrl = process.env.REACT_APP_LOCAL_RELAY_SERVER_URL;
-
   const clientRef = useRef<RealtimeClient>(
-    new RealtimeClient({
-      url: 'wss://api.openai.com/v1/realtime',
-      apiKey: '', // Do not pass the API key directly in the client-side code
-      dangerouslyAllowAPIKeyInBrowser: false,
-    })
+    new RealtimeClient(
+      LOCAL_RELAY_SERVER_URL
+        ? { url: LOCAL_RELAY_SERVER_URL }
+        : {
+            apiKey: apiKey,
+            dangerouslyAllowAPIKeyInBrowser: true,
+          }
+    )
   );
-  
-
-  useEffect(() => {
-    if (clientRef.current) {
-      console.log("WebSocket URL from RealtimeClient:", clientRef.current.realtime.url);
-    }
-  }, []);
   const contentTopRef = useRef<HTMLDivElement | null>(null);
-  
+
   /**
    * References for
    * - Rendering audio visualization (canvas)
@@ -806,12 +798,12 @@ export function ConsolePage() {
     <div data-component="ConsolePage">
       <div className="content-top" ref={contentTopRef} style={{ maxHeight: '60px', overflow: 'hidden' }}>
         <div className="content-api-key">
-          {LOCAL_RELAY_SERVER_URL && (
+          {!LOCAL_RELAY_SERVER_URL && (
             <Button
               icon={Edit}
               iconPosition="end"
               buttonStyle="flush"
-              label={`api key: Filled`}
+              label={`api key: ${apiKey.slice(0, 3)}...`}
               onClick={() => resetAPIKey()}
             />
           )}
