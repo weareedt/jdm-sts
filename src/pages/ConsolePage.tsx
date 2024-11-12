@@ -933,7 +933,7 @@ export function ConsolePage() {
             {isConnected && canPushToTalk && (
               <Button
                 className="push-to-talk"
-                label={isRecording ? 'Release to send' : 'Push to talk'}
+                label={isRecording ? '' : ''}
                 buttonStyle={isRecording ? 'alert' : 'regular'}
                 disabled={!isConnected || !canPushToTalk}
                 onMouseDown={startRecording}
