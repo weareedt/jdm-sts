@@ -89,7 +89,7 @@ export function ConsolePage() {
 
   const clientRef = useRef<RealtimeClient>(
     new RealtimeClient({
-      url: relayUrl || 'wss://api.openai.com/v1/realtime',
+      url: 'wss://api.openai.com/v1/realtime',
       apiKey: '', // Do not pass the API key directly in the client-side code
       dangerouslyAllowAPIKeyInBrowser: false,
     })
