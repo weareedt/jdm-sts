@@ -101,7 +101,7 @@ export const VoiceChat: React.FC<Props> = ({ scrapedContent }) => {
             icon={Edit}
             iconPosition="end"
             buttonStyle="flush"
-            label={`api key: ${apiKey.slice(0, 3)}...`}
+            label={`api key: Filled...`}
             onClick={resetAPIKey}
           />
         </div>
