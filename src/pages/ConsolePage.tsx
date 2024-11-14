@@ -95,6 +95,8 @@ export function ConsolePage() {
   );
   const contentTopRef = useRef<HTMLDivElement | null>(null);
 
+  const [userMessage, setUserMessage] = useState('');
+
   /**
    * References for
    * - Rendering audio visualization (canvas)
@@ -182,6 +184,31 @@ export function ConsolePage() {
     }
   }, []);
 
+  const handleSendMessage = () => {
+    const client = clientRef.current;
+  
+    // Check if the client is connected before sending the message
+    if (!isConnected || !client) {
+      console.warn("Client is not connected. Message not sent.");
+      return;
+    }
+  
+    // Check if the message is not empty
+    if (userMessage.trim() === '') return;
+  
+    // Send the user message
+    client.sendUserMessageContent([
+      {
+        type: 'input_text',
+        text: userMessage,
+      },
+    ]);
+  
+    // Clear the input field
+    setUserMessage('');
+  };
+  
+  
   /**
    * Connect to conversation:
    * WavRecorder taks speech input, WavStreamPlayer output, client is API client
@@ -316,6 +343,7 @@ export function ConsolePage() {
     setIsMinimized((prev) => !prev);
   };
 
+  
   /**
    * Auto-scroll the event logs
    */
@@ -825,22 +853,35 @@ export function ConsolePage() {
   
         <div className="content-logs">
           <div className="content-block events">
-            <div 
-              className="visualization" 
-              ref={mountRef} 
-              style={{ 
-                width: '100%', 
-                height: '100%',
-              }}
+            <div
+                className="visualization"
+                ref={mountRef}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                }}
               >
-                {/* Centered overlay log text displaying the last assistant's message */}
-                  {items.length > 0 && items[items.length - 1].role === 'assistant' && (
-                    <div className="overlay-log">
-                      {items[items.length - 1].formatted.transcript ||
-                        items[items.length - 1].formatted.text ||
-                        '(No content available)'}
-                    </div>
-                  )}
+                {/* Overlay log for the assistant's latest message */}
+                {items.length > 0 && (
+                  <div className="overlay-log assistant-log">
+                    {items
+                      .filter((item) => item.role === 'assistant')
+                      .slice(-1)[0]?.formatted.transcript ||
+                      items.filter((item) => item.role === 'assistant').slice(-1)[0]?.formatted.text ||
+                      '(No assistant response)'}
+                  </div>
+                )}
+
+                {/* Overlay log for the user's latest transcript */}
+                {items.length > 0 && (
+                  <div className="overlay-log user-log">
+                    {items
+                      .filter((item) => item.role === 'user')
+                      .slice(-1)[0]?.formatted.transcript ||
+                      items.filter((item) => item.role === 'user').slice(-1)[0]?.formatted.text ||
+                      '(No user input)'}
+                  </div>
+                )}
               </div>
             </div>
           <div className={`chat-window ${isMinimized ? 'minimized' : ''}`}>
@@ -855,69 +896,81 @@ export function ConsolePage() {
             </div>
             {!isMinimized && (
               <div className="chat-content">
-                <div className="content-block-title">Conversation</div>
-                <div className="content-block-body" data-conversation-content>
-                  {!items.length && `awaiting connection..`}
-                  {items.map((conversationItem, i) => {
-                    return (
-                      <div className="conversation-item" key={conversationItem.id}>
-                        <div className={`speaker ${conversationItem.role || ''}`}>
-                          <div>
-                            {(
-                              conversationItem.role || conversationItem.type
-                            ).replaceAll('_', ' ')}
-                          </div>
-                          <div
-                            className="close"
-                            onClick={() =>
-                              deleteConversationItem(conversationItem.id)
-                            }
-                          >
-                            <X />
-                          </div>
+              <div className="content-block-title">Conversation</div>
+              <div className="content-block-body" data-conversation-content>
+                {!items.length && `awaiting connection..`}
+                {items.map((conversationItem, i) => {
+                  return (
+                    <div className="conversation-item" key={conversationItem.id}>
+                      <div className={`speaker ${conversationItem.role || ''}`}>
+                        <div>
+                          {(conversationItem.role || conversationItem.type).replaceAll('_', ' ')}
                         </div>
-                        <div className={`speaker-content`} style={{ color: 'white' }}>
-                          {/* tool response */}
-                          {conversationItem.type === 'function_call_output' && (
-                            <div>{conversationItem.formatted.output}</div>
-                          )}
-                          {/* tool call */}
-                          {!!conversationItem.formatted.tool && (
-                            <div>
-                              {conversationItem.formatted.tool.name}(
-                              {conversationItem.formatted.tool.arguments})
-                            </div>
-                          )}
-                          {!conversationItem.formatted.tool &&
-                            conversationItem.role === 'user' && (
-                              <div>
-                                {conversationItem.formatted.transcript ||
-                                  (conversationItem.formatted.audio?.length
-                                    ? '(awaiting transcript)'
-                                    : conversationItem.formatted.text ||
-                                      '(item sent)')}
-                              </div>
-                            )}
-                          {!conversationItem.formatted.tool &&
-                            conversationItem.role === 'assistant' && (
-                              <div>
-                                {conversationItem.formatted.transcript ||
-                                  conversationItem.formatted.text ||
-                                  '(truncated)'}
-                              </div>
-                            )}
-                          {conversationItem.formatted.file && (
-                            <audio
-                              src={conversationItem.formatted.file.url}
-                              controls
-                            />
-                          )}
+                        <div
+                          className="close"
+                          onClick={() => deleteConversationItem(conversationItem.id)}
+                        >
+                          <X />
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
+                      <div className={`speaker-content`} style={{ color: 'white' }}>
+                        {/* tool response */}
+                        {conversationItem.type === 'function_call_output' && (
+                          <div>{conversationItem.formatted.output}</div>
+                        )}
+                        {/* tool call */}
+                        {!!conversationItem.formatted.tool && (
+                          <div>
+                            {conversationItem.formatted.tool.name}(
+                            {conversationItem.formatted.tool.arguments})
+                          </div>
+                        )}
+                        {!conversationItem.formatted.tool &&
+                          conversationItem.role === 'user' && (
+                            <div>
+                              {conversationItem.formatted.transcript ||
+                                (conversationItem.formatted.audio?.length
+                                  ? '(awaiting transcript)'
+                                  : conversationItem.formatted.text || '(item sent)')}
+                            </div>
+                          )}
+                        {!conversationItem.formatted.tool &&
+                          conversationItem.role === 'assistant' && (
+                            <div>
+                              {conversationItem.formatted.transcript ||
+                                conversationItem.formatted.text || '(truncated)'}
+                            </div>
+                          )}
+                        {conversationItem.formatted.file && (
+                          <audio
+                            src={conversationItem.formatted.file.url}
+                            controls
+                          />
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
+            
+              {/* Input field and send button */}
+              <div className="chat-input">
+                <input
+                  type="text"
+                  placeholder="Type your message..."
+                  value={userMessage}
+                  onChange={(e) => setUserMessage(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSendMessage();
+                  }}
+                  className="input-field"
+                />
+                <button onClick={handleSendMessage} className="send-button">
+                  Send
+                </button>
+              </div>
+            </div>
+            
             )}
           </div>
           <div className="content-actions">
