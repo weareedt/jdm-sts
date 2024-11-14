@@ -219,7 +219,6 @@ export function ConsolePage() {
     // Always create a new WavRecorder instance when connecting
     wavRecorderRef.current = new WavRecorder({ sampleRate: 24000 });
     const wavRecorder = wavRecorderRef.current;
-    
     const wavStreamPlayer = wavStreamPlayerRef.current;
 
     // Set state variables
@@ -229,29 +228,52 @@ export function ConsolePage() {
     setItems(client.conversation.getItems());
 
     try {
-      // Connect to microphone
-      await wavRecorder.begin();
+        // Connect to microphone
+        await wavRecorder.begin();
 
-      // Connect to audio output
-      await wavStreamPlayer.connect();
+        // Connect to audio output
+        await wavStreamPlayer.connect();
 
-      // Connect to realtime API
-      await client.connect();
-      client.sendUserMessageContent([
-        {
-          type: `input_text`,
-          text: `Hello!`,
-        },
-      ]);
+        // Connect to realtime API
+        await client.connect();
+        client.sendUserMessageContent([
+            {
+                type: `input_text`,
+                text: `Hello!`,
+            },
+        ]);
 
-      if (client.getTurnDetectionType() === 'server_vad') {
-        await wavRecorder.record((data) => client.appendInputAudio(data.mono));
-      }
+        // Send a POST request to your webhook URL
+        await fetch('https://hooks.spline.design/0AmP-aHvvxs', {
+          method: 'POST',
+          mode: 'no-cors', // Use 'cors' mode to see detailed error messages
+          headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `qZz4w4WlZgUqvmN8LvuFHtCdYRuxM8pUrPFuI_Woetk`,
+              'Accept': 'application/json'
+          },
+          body: JSON.stringify({
+              "WebhookTest": "Hello, successsssla"
+            })
+        }).then(response => {
+            if (!response.ok) {
+                console.error("Webhook request failed:", response.statusText);
+            } else {
+                console.log("Webhook request successful!");
+            }
+        }).catch(error => {
+            console.error("Error sending webhook request:", error);
+        });
+
+        if (client.getTurnDetectionType() === 'server_vad') {
+            await wavRecorder.record((data) => client.appendInputAudio(data.mono));
+        }
     } catch (error) {
-      console.error("Error connecting:", error);
-      setIsConnected(false);
+        console.error("Error connecting:", error);
+        setIsConnected(false);
     }
-  }, []);
+}, []);
+
 
   /**
    * Disconnect and reset conversation state
