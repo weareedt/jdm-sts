@@ -963,12 +963,6 @@ export function ConsolePage() {
                                 conversationItem.formatted.text || '(truncated)'}
                             </div>
                           )}
-                        {conversationItem.formatted.file && (
-                          <audio
-                            src={conversationItem.formatted.file.url}
-                            controls
-                          />
-                        )}
                       </div>
                     </div>
                   );
