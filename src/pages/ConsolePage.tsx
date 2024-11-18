@@ -28,6 +28,7 @@ import chatIcon from '../assets/topic.svg';
 import './ConsolePage.scss';
 import * as THREE from 'three';
 import { vertexShader, fragmentShader } from '../utils/shaders';
+import Spline from '@splinetool/react-spline';
 
 /**
  * Type for result from get_weather() function call
@@ -150,6 +151,7 @@ export function ConsolePage() {
   const [isColorControlVisible, setIsColorControlVisible] = useState(true);
 
   const [animationColor, setAnimationColor] = useState('#ffff00');
+  const [isToggleVisible, setIsToggleVisible] = useState(true);
 
   /**
    * Utility for formatting the timing of logs
@@ -600,6 +602,7 @@ export function ConsolePage() {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
+        setIsToggleVisible((prev) => !prev);
         toggleContentTopDisplay();
         toggleColorControl();
       }
@@ -843,7 +846,6 @@ export function ConsolePage() {
   /**
    * Render the application
    */
-  
   return (
     <div data-component="ConsolePage">
       <div className="content-top" ref={contentTopRef} style={{ maxHeight: '60px', overflow: 'hidden' }}>
@@ -859,7 +861,7 @@ export function ConsolePage() {
           )}
         </div>
         
-        <div className="action-button" style={{ position: 'absolute', top: '10px', right: '16px' }}>
+        <div className="action-button" style={{ position: 'absolute', top: '18px', right: '16px' }}>
           <Button
             icon={isConnected ? X : Zap}
             iconPosition={isConnected ? 'end' : 'start'}
@@ -875,24 +877,19 @@ export function ConsolePage() {
   
         <div className="content-logs">
           <div className="content-block events">
-            <div
-                className="visualization"
-                ref={mountRef}
-                style={{
-                  width: '100%',
-                  height: '100%',
-                }}
-              >
-                {/* Overlay log for the assistant's latest message */}
-                {items.length > 0 && (
-                  <div className="overlay-log assistant-log">
-                    {items
-                      .filter((item) => item.role === 'assistant')
-                      .slice(-1)[0]?.formatted.transcript ||
-                      items.filter((item) => item.role === 'assistant').slice(-1)[0]?.formatted.text ||
-                      '(No assistant response)'}
-                  </div>
-                )}
+            <div className="spline-container" style={{ position: 'relative', width: '100%', height: '100%' }}>
+            <Spline scene="https://prod.spline.design/MGk1HLn1iN0hQQb1/scene.splinecode" />
+            </div>
+            {/* Overlay log for the assistant's latest message */}
+            {items.length > 0 && (
+              <div className="overlay-log assistant-log">
+                {items
+                  .filter((item) => item.role === 'assistant')
+                  .slice(-1)[0]?.formatted.transcript ||
+                  items.filter((item) => item.role === 'assistant').slice(-1)[0]?.formatted.text ||
+                  '(No assistant response)'}
+              </div>
+            )}
 
                 {/* Overlay log for the user's latest transcript */}
                 {items.length > 0 && (
@@ -989,30 +986,34 @@ export function ConsolePage() {
             
             )}
           </div>
-          <div className="content-actions">
-            <div className="toggle-container"> {/* Add a wrapper div here */}
+          <div className="content-main">
+        <div className="content-actions">
+          <div className="toggle-container"> {/* Add a wrapper div here */}
+            {isToggleVisible && ( // Check visibility
               <Toggle
-                defaultValue={false}
+                defaultValue={true}
                 labels={['manual', 'vad']}
                 values={['none', 'server_vad']}
+                
                 onChange={(_, value) => changeTurnEndType(value)}
               />
-            </div>
-            <div className="spacer" />
-            {isConnected && canPushToTalk && (
-              <Button
-                className="push-to-talk"
-                label={isRecording ? '' : ''}
-                buttonStyle={isRecording ? 'alert' : 'regular'}
-                disabled={!isConnected || !canPushToTalk}
-                onMouseDown={startRecording}
-                onMouseUp={stopRecording}
-              />
             )}
-            <div className="spacer" />
           </div>
+          <div className="spacer" />
+          {isConnected && canPushToTalk && (
+            <Button
+              className="push-to-talk"
+              label={isRecording ? '' : ''}
+              buttonStyle={isRecording ? 'alert' : 'regular'}
+              disabled={!isConnected || !canPushToTalk}
+              onMouseDown={startRecording}
+              onMouseUp={stopRecording}
+            />
+          )}
+          <div className="spacer" />
         </div>
       </div>
     </div>
-  );
+  </div> 
+);
 }

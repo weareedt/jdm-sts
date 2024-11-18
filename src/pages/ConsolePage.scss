@@ -38,11 +38,12 @@
       align-items: center;
       margin-left: auto;
       padding: 8px 16px;
+      height: 40px;
       border-radius: 4px;
       transition: background-color 0.3s ease;
       
       &:active, &.active {
-        background-color: #0099ff; // Change this to your preferred active color
+        background-color: #19C6A5; // Change this to your preferred active color
         color: white;
       }
     }
@@ -269,35 +270,6 @@
     }
   }
 
-  .visualization {
-    position: absolute;
-    display: flex;
-    bottom: 4px;
-    right: 8px;
-    padding: 4px;
-    border-radius: 16px;
-    z-index: 10;
-    gap: 2px;
-    .visualization-entry {
-      position: relative;
-      display: flex;
-      align-items: center;
-      height: 40px;
-      width: 100px;
-      gap: 4px;
-      &.client {
-        color: #0099ff;
-      }
-      &.server {
-        color: #009900;
-      }
-      canvas {
-        width: 100%;
-        height: 100%;
-        color: currentColor;
-      }
-    }
-  }
 
   .chat-window {
     position: fixed;
@@ -331,12 +303,12 @@
       align-items: center;
       justify-content: space-between;
       padding: 8px 8px;
-      background: #333;
+      background: #19C6A5;
       border-radius: 8px 8px 0 0;
 
       .header-title {
         font-weight: 500;
-        color: #ffffff;
+        color: #333;
       }
 
       /* Hide the topic icon by default */
@@ -355,7 +327,7 @@
           background: none;
           border: none;
           cursor: pointer;
-          color: #cfcfcf;
+          color: #333;
           
           &:hover {
             color: #6d6d6d;
@@ -431,26 +403,6 @@
   }
 }
 
-.triangle-button {
-  position: fixed;
-  right: 20px;
-  bottom: 20px;
-  align-items: center;
-  width: 40px;
-  height: 40px;
-  border-left: 10px solid transparent;
-  border-right: 10px solid transparent;
-  border-bottom: 10px solid #000; // Change color as needed
-  background: none;
-  cursor: pointer;
-  transition: transform 0.3s ease;
-
-  &.minimized {
-    border-bottom: none;
-    border-top: 10px solid #000; // Change color as needed
-  }
-}
-
 /* Fade-in animation */
 @keyframes fadeIn {
   from {
@@ -523,14 +475,14 @@ audio {
 .send-button {
   margin-left: 8px;
   padding: 8px 12px;
-  background-color: #007bff;
-  color: white;
+  background-color: #19C6A5;
+  color: #333;
   border: none;
   border-radius: 4px;
   cursor: pointer;
 }
 
 .send-button:hover {
-  background-color: #0056b3;
+  background-color: #1abc93;
 }
 
