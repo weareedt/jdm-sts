@@ -68,11 +68,6 @@ export const VoiceChat: React.FC<Props> = ({ scrapedContent }) => {
       const client = clientRef.current;
       const wavRecorder = wavRecorderRef.current;
 
-      // Resume the AudioContext if it's suspended
-      if (audioContext.state === 'suspended') {
-        await audioContext.resume();
-      }
-
       // Initialize audio recording first
       await wavRecorder.begin();
 
@@ -108,9 +103,7 @@ export const VoiceChat: React.FC<Props> = ({ scrapedContent }) => {
       try {
         const wavRecorder = wavRecorderRef.current;
         await wavRecorder.end();
-        if (audioContext.state === 'running') {
-          await audioContext.suspend();
-        }
+    
       } catch (cleanupError) {
         console.error('Error during cleanup:', cleanupError);
       }
@@ -129,10 +122,6 @@ export const VoiceChat: React.FC<Props> = ({ scrapedContent }) => {
       const wavRecorder = wavRecorderRef.current;
       await wavRecorder.end();
 
-      // Suspend the AudioContext when not in use
-      if (audioContext.state === 'running') {
-        await audioContext.suspend();
-      }
     } catch (error) {
       console.error('Error disconnecting:', error);
     }
@@ -179,10 +168,6 @@ export const VoiceChat: React.FC<Props> = ({ scrapedContent }) => {
       client.off('error', errorHandler);
       client.off('conversation.updated', conversationHandler);
       client.reset();
-      
-      if (audioContext.state === 'running') {
-        audioContext.suspend();
-      }
     };
   }, [scrapedContent]);
 
