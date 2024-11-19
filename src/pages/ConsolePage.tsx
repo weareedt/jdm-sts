@@ -143,7 +143,6 @@ export function ConsolePage() {
   const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
   const [sound, setSound] = useState<THREE.Audio | null>(null);
   const [analyser, setAnalyser] = useState<THREE.AudioAnalyser | null>(null);
-  const [audioContextInitialized, setAudioContextInitialized] = useState(false);
 
   // Add new state for audio initialization
   const [isAudioInitialized, setIsAudioInitialized] = useState(false);
@@ -903,71 +902,11 @@ export function ConsolePage() {
                 )}
               </div>
             </div>
-          <div className={`chat-window ${isMinimized ? 'minimized' : ''}`}>
-            <div className="chat-header" onClick={toggleMinimize}>
-              <img src={chatIcon} alt="Topic Icon" className="topic-icon"/>
-              {!isMinimized && <div className="header-title">Chat</div>} {/* Only show title when not minimized */}
-              <div className="header-controls">
-                <button className="triangle-button">
-                  {isMinimized ? '' : 'Min'} {/* Change button text based on state */}
-                </button>
-              </div>
-            </div>
-            {!isMinimized && (
-              <div className="chat-content">
-              <div className="content-block-title">Conversation</div>
-              <div className="content-block-body" data-conversation-content>
-                {!items.length && `awaiting connection..`}
-                {items.map((conversationItem, i) => {
-                  return (
-                    <div className="conversation-item" key={conversationItem.id}>
-                      <div className={`speaker ${conversationItem.role || ''}`}>
-                        <div>
-                          {(conversationItem.role || conversationItem.type).replaceAll('_', ' ')}
-                        </div>
-                        <div
-                          className="close"
-                          onClick={() => deleteConversationItem(conversationItem.id)}
-                        >
-                          <X />
-                        </div>
-                      </div>
-                      <div className={`speaker-content`} style={{ color: 'white' }}>
-                        {/* tool response */}
-                        {conversationItem.type === 'function_call_output' && (
-                          <div>{conversationItem.formatted.output}</div>
-                        )}
-                        {/* tool call */}
-                        {!!conversationItem.formatted.tool && (
-                          <div>
-                            {conversationItem.formatted.tool.name}(
-                            {conversationItem.formatted.tool.arguments})
-                          </div>
-                        )}
-                        {!conversationItem.formatted.tool &&
-                          conversationItem.role === 'user' && (
-                            <div>
-                              {conversationItem.formatted.transcript ||
-                                (conversationItem.formatted.audio?.length
-                                  ? '(awaiting transcript)'
-                                  : conversationItem.formatted.text || '(item sent)')}
-                            </div>
-                          )}
-                        {!conversationItem.formatted.tool &&
-                          conversationItem.role === 'assistant' && (
-                            <div>
-                              {conversationItem.formatted.transcript ||
-                                conversationItem.formatted.text || '(truncated)'}
-                            </div>
-                          )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+          
+        
             
-              {/* Input field and send button */}
-              <div className="chat-input">
+              {/* Chat Input Section */}
+              <div className="chat-input" style={{ position: 'fixed', bottom: '20px', left: '50%', transform: 'translateX(-50%)', width: '400px' }}>
                 <input
                   type="text"
                   placeholder="Type your message..."
@@ -977,14 +916,15 @@ export function ConsolePage() {
                     if (e.key === 'Enter') handleSendMessage();
                   }}
                   className="input-field"
+                  style={{ width: 'calc(100% - 100px)', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
                 />
-                <button onClick={handleSendMessage} className="send-button">
+                <button onClick={handleSendMessage} className="send-button" style={{ padding: '8px 12px', backgroundColor: '#19C6A5', color: '#333', border: 'none', borderRadius: '4px', marginLeft: '8px' }}>
                   Send
                 </button>
               </div>
-            </div>
+           
             
-            )}
+            
           </div>
           <div className="content-main">
         <div className="content-actions">
@@ -1014,6 +954,6 @@ export function ConsolePage() {
         </div>
       </div>
     </div>
-  </div> 
+
 );
 }
