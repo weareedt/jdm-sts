@@ -29,6 +29,7 @@ import './ConsolePage.scss';
 import * as THREE from 'three';
 import { vertexShader, fragmentShader } from '../utils/shaders';
 import Spline from '@splinetool/react-spline';
+import Webcam from 'react-webcam';
 
 /**
  * Type for result from get_weather() function call
@@ -151,7 +152,7 @@ export function ConsolePage() {
 
   const [animationColor, setAnimationColor] = useState('#ffff00');
   const [isToggleVisible, setIsToggleVisible] = useState(true);
-
+  //const [isWebButtVisible, setIsWebButtVisible] = useState(true);
   /**
    * Utility for formatting the timing of logs
    */
@@ -594,16 +595,13 @@ export function ConsolePage() {
   };
 
   // Function to toggle color control visibility
-  const toggleColorControl = () => {
-    setIsColorControlVisible((prev) => !prev);
-  };
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setIsToggleVisible((prev) => !prev);
         toggleContentTopDisplay();
-        toggleColorControl();
+
       }
     };
 
@@ -842,6 +840,22 @@ export function ConsolePage() {
     setIsPlaying(!isPlaying);
   };
 
+  const [isWebcamEnabled, setIsWebcamEnabled] = useState(false);
+  const [webcamError, setWebcamError] = useState('');
+
+  useEffect(() => {
+    // Check for webcam permissions
+    const checkWebcamPermissions = async () => {
+      try {
+        await navigator.mediaDevices.getUserMedia({ video: true });
+        setIsWebcamEnabled(true);
+      } catch (error) {
+        setWebcamError('Unable to access webcam. Please check your permissions.');
+      }
+    };
+
+    checkWebcamPermissions();
+  }, []);
   /**
    * Render the application
    */
@@ -873,7 +887,24 @@ export function ConsolePage() {
         </div>
       </div>
       <div className="content-main">
-  
+  <div className="webcam-container">
+    {isWebcamEnabled ? (
+      <Webcam
+        audio={false}
+        height={320}
+        width={240}
+        screenshotFormat="image/jpeg"
+        videoConstraints={{
+          facingMode: 'user',
+          width: { ideal: 240 }, // Width for portrait
+          height: { ideal: 320 }, // Height for portrait
+        }}
+      />
+    ) : (
+      <div style={{ color: 'red' }}>{webcamError || 'Webcam is not enabled'}</div>
+    )}
+  </div>
+     
         <div className="content-logs">
           <div className="content-block events">
             <div className="spline-container" style={{ position: 'relative', width: '100%', height: '100%' }}>
@@ -889,7 +920,6 @@ export function ConsolePage() {
                   '(No assistant response)'}
               </div>
             )}
-
                 {/* Overlay log for the user's latest transcript */}
                 {items.length > 0 && (
                   <div className="overlay-log user-log">
@@ -903,8 +933,6 @@ export function ConsolePage() {
               </div>
             </div>
           
-        
-            
               {/* Chat Input Section */}
               <div className="chat-input" style={{ position: 'fixed', bottom: '20px', left: '50%', transform: 'translateX(-50%)', width: '400px' }}>
                 <input
@@ -921,8 +949,8 @@ export function ConsolePage() {
                 <button onClick={handleSendMessage} className="send-button" style={{ padding: '8px 12px', backgroundColor: '#19C6A5', color: '#333', border: 'none', borderRadius: '4px', marginLeft: '8px' }}>
                   Send
                 </button>
+                
               </div>
-           
             
             
           </div>
@@ -948,7 +976,7 @@ export function ConsolePage() {
               disabled={!isConnected || !canPushToTalk}
               onMouseDown={startRecording}
               onMouseUp={stopRecording}
-            />
+            />  
           )}
           <div className="spacer" />
         </div>
