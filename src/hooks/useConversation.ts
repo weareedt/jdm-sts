@@ -30,7 +30,8 @@ export const useConversation = (apiKey: string, LOCAL_RELAY_SERVER_URL: string):
     eventsScrollHeight: 0
   });
 
-  const sampleRate = 44100;
+  const isFirefox = navigator.userAgent.match(/Firefox\/([1]{1}[7-9]{1}|[2-9]{1}[0-9]{1})/);
+  const sampleRate = isFirefox ? 44100 : 24000;
   // Audio instances
   const recorder = useRef<WavRecorder | null>(null);
   const streamPlayer = useRef<WavStreamPlayer>(new WavStreamPlayer({ sampleRate: sampleRate }));
