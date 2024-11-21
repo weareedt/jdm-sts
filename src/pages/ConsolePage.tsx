@@ -10,7 +10,7 @@ import { useWebcam } from '../hooks/useWebcam';
 // Components
 import { ControlPanel } from '../components/console/ControlPanel';
 import { Visualization } from '../components/console/Visualization';
-import { ChatWindow } from '../components/console/ChatWindow';
+//import { ChatWindow } from '../components/console/ChatWindow';
 import { ActionControls } from '../components/console/ActionControls';
 import { WebcamComponent } from '../components/console/Webcam';
 
@@ -47,6 +47,7 @@ export function ConsolePage() {
     stopRecording,
     changeTurnEndType
   } = useConversation(apiKey, LOCAL_RELAY_SERVER_URL);
+  
 
   const { initializeAudio, handleStartPause } = useAudio();
   const { shaderMaterialRef } = useVisualization(uiRefs.mount, state.animationColor);
@@ -108,15 +109,15 @@ export function ConsolePage() {
         contentTopRef={uiRefs.contentTop}
       />
 
-      <div className="content-main">
+      <div className="content-main"> 
           <WebcamComponent 
           />
-        
-        <div className="content-logs">
           <Visualization
             mountRef={uiRefs.mount}
             items={state.items}
           />
+        <div className="content-logs">
+         
 
           <ActionControls
             isConnected={state.isConnected}

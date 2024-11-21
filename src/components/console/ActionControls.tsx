@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '../button/Button';
 import { Toggle } from '../toggle/Toggle';
 
@@ -19,16 +19,32 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
   onStartRecording,
   onStopRecording
 }) => {
+  const [isToggleVisible, setIsToggleVisible] = useState(true);
+
+  // Keyboard Event Handler
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsToggleVisible((prev) => !prev); // Toggle visibility
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   return (
     <div className="content-actions">
-      <div className="toggle-container">
-        <Toggle
-          defaultValue={false}
-          labels={['manual', 'vad']}
-          values={['none', 'server_vad']}
-          onChange={(_, value) => onTurnEndTypeChange(value)}
-        />
-      </div>
+      {isToggleVisible && (
+        <div className="toggle-container">
+          <Toggle
+            defaultValue={false}
+            labels={['manual', 'vad']}
+            values={['none', 'server_vad']}
+            onChange={(_, value) => onTurnEndTypeChange(value)}
+          />
+        </div>
+      )}
       <div className="spacer" />
       {isConnected && canPushToTalk && (
         <Button

@@ -520,12 +520,14 @@ audio {
   background-color: #1abc93;
 }
 
-.webcam-container {
-  position: absolute;
-  right: 20px;
-  top: 80px;
-  z-index: 1000; // Ensure it appears above other elements
-  border: 3px solid #19C6A5;
-  border-radius: 8px; // Optional: Rounded corners
 
+.webcam-container {
+  position: absolute; // Use fixed positioning to keep it in the viewport
+  top: 80px; // Adjust as needed for spacing from the top
+  right: 20px; // Adjust as needed for spacing from the right
+  width: 100; // Allow width to be determined by aspect ratio
+  height: 100; // Set height to 0 to use padding for aspect ratio
+  z-index: 10; 
+  border: 3px solid #19c6a5; 
+  border-radius: 4px;
 }
