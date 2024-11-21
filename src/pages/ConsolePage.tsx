@@ -62,10 +62,7 @@ export function ConsolePage() {
     }
   }, []);
 
-  const handleMinimizeToggle = useCallback(() => {
-    setState(prev => ({ ...prev, isMinimized: !prev.isMinimized }));
-  }, [setState]);
-
+  
   const handleContentTopToggle = useCallback(() => {
     if (uiRefs.contentTop.current) {
       const currentDisplay = window.getComputedStyle(uiRefs.contentTop.current).display;
@@ -112,20 +109,13 @@ export function ConsolePage() {
       />
 
       <div className="content-main">
+          <WebcamComponent 
+          />
+        
         <div className="content-logs">
           <Visualization
             mountRef={uiRefs.mount}
             items={state.items}
-          />
-
-          <ChatWindow
-            isMinimized={state.isMinimized}
-            items={state.items}
-            userMessage={state.userMessage}
-            onMinimizeToggle={handleMinimizeToggle}
-            onMessageChange={handleMessageChange}
-            onMessageSend={handleSendMessage}
-            onDeleteItem={handleDeleteItem}
           />
 
           <ActionControls
@@ -136,9 +126,25 @@ export function ConsolePage() {
             onStartRecording={startRecording}
             onStopRecording={stopRecording}
           />
-          <div className="webcam-wrapper">
-        <WebcamComponent />
-      </div>
+
+          {/* Text Input Field */}
+          <div className="chat-input">
+            <input
+              type="text"
+              placeholder="Type your message..."
+              value={state.userMessage}
+              onChange={(e) => handleMessageChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleSendMessage();
+                }
+              }}
+              className="input-field"
+            />
+            <button onClick={handleSendMessage} className="send-button">
+              Send
+            </button>
+          </div>
         </div>
       </div>
     </div>
