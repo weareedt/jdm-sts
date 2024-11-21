@@ -64,7 +64,8 @@ export const useConversation = (apiKey: string, LOCAL_RELAY_SERVER_URL: string):
     // Set instructions and transcription
     currentClient.updateSession({ 
       instructions,
-      input_audio_transcription: { model: 'whisper-1' }
+      input_audio_transcription: { model: 'whisper-1' },
+      voice: 'alloy'
     });
 
     // Handle realtime events
