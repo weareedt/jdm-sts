@@ -1,5 +1,34 @@
+@font-face {
+  font-family: 'SF Pro Display';
+  src: url('../fonts/SF-Pro-Display-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'SF Pro Display';
+  src: url('../fonts/SF-Pro-Display-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'SF Pro Text';
+  src: url('../fonts/SF-Pro-Text-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'SF Pro Text';
+  src: url('../fonts/SF-Pro-Text-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+}
+
+
 [data-component='ConsolePage'] {
-  font-family: 'Roboto Mono', monospace;
+  font-family: 'SF Pro Display', monospace;
   font-weight: 400;
   font-style: normal;
   font-size: 11px;
@@ -38,11 +67,12 @@
       align-items: center;
       margin-left: auto;
       padding: 8px 16px;
+      height: 40px;
       border-radius: 4px;
       transition: background-color 0.3s ease;
       
       &:active, &.active {
-        background-color: #0099ff; // Change this to your preferred active color
+        background-color: #19C6A5; // Change this to your preferred active color
         color: white;
       }
     }
@@ -54,7 +84,7 @@
     margin: 0px 2px;
     display: flex;
     overflow: hidden;
-    margin-bottom: 10px;
+    margin-bottom: px;
     .content-block {
       position: relative;
       display: flex;
@@ -63,7 +93,7 @@
       width: 100%;
       .content-block-title {
         flex-shrink: 0;
-        padding-top: 16px;
+        padding-top: 8px;
         padding-bottom: 4px;
         position: relative;
       }
@@ -269,48 +299,16 @@
     }
   }
 
-  .visualization {
-    position: absolute;
-    display: flex;
-    bottom: 4px;
-    right: 8px;
-    padding: 4px;
-    border-radius: 16px;
-    z-index: 10;
-    gap: 2px;
-    .visualization-entry {
-      position: relative;
-      display: flex;
-      align-items: center;
-      height: 40px;
-      width: 100px;
-      gap: 4px;
-      &.client {
-        color: #0099ff;
-      }
-      &.server {
-        color: #009900;
-      }
-      canvas {
-        width: 100%;
-        height: 100%;
-        color: currentColor;
-      }
-    }
-  }
-
   .chat-window {
     position: fixed;
-    right: 20px;
-    bottom: 20px;
-    width: 350px;
-    background: #333;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s ease;
+    top: 50%; left: 30%; bottom: 30%;
+    transform: translateX(-50%);
+    width: 300px;
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     z-index: 1000;
-    display: flex;
-    flex-direction: column;
+  
     
     &.minimized {
       height: 40px !important;
@@ -331,12 +329,12 @@
       align-items: center;
       justify-content: space-between;
       padding: 8px 8px;
-      background: #333;
+      background: #19C6A5;
       border-radius: 8px 8px 0 0;
 
       .header-title {
         font-weight: 500;
-        color: #ffffff;
+        color: #333;
       }
 
       /* Hide the topic icon by default */
@@ -355,7 +353,7 @@
           background: none;
           border: none;
           cursor: pointer;
-          color: #cfcfcf;
+          color: #333;
           
           &:hover {
             color: #6d6d6d;
@@ -386,7 +384,7 @@
         }
         
         .speaker-content {
-          background: #333;
+          background: #f0f0f0;
           padding: 8px 12px;
           border-radius: 6px;
           margin-top: 4px;
@@ -431,26 +429,6 @@
   }
 }
 
-.triangle-button {
-  position: fixed;
-  right: 20px;
-  bottom: 20px;
-  align-items: center;
-  width: 40px;
-  height: 40px;
-  border-left: 10px solid transparent;
-  border-right: 10px solid transparent;
-  border-bottom: 10px solid #000; // Change color as needed
-  background: none;
-  cursor: pointer;
-  transition: transform 0.3s ease;
-
-  &.minimized {
-    border-bottom: none;
-    border-top: 10px solid #000; // Change color as needed
-  }
-}
-
 /* Fade-in animation */
 @keyframes fadeIn {
   from {
@@ -473,6 +451,7 @@ audio {
 
 .overlay-log {
   position: absolute;
+  font-size: 17px;
   top: 70%;
   left: 50%;
   transform: translate(-50%, -50%);
@@ -484,12 +463,12 @@ audio {
 }
 
 .assistant-log {
-  top: 70%;
+  top: 80%;
   color: #00ff00; /* Green for assistant response */
 }
 
 .user-log {
-  top: 80%; /* Position it below the assistant log */
+  top: 15%; /* Position it below the assistant log */
   color: #ffcc00; /* Different color for user transcript */
 }
 
@@ -501,6 +480,7 @@ audio {
 }
 
 .push-to-talk{
+  display: none;
   position: fixed;
   bottom: 20px;
   z-index: 1000; 
@@ -511,6 +491,11 @@ audio {
   align-items: center;
   padding: 10px;
   border-top: 1px solid #ccc;
+  position: fixed;
+  bottom: 20px; 
+  left: 50%;
+  transform: translateX(-50%);
+  width: 400px; 
 }
 
 .input-field {
@@ -518,19 +503,29 @@ audio {
   padding: 8px;
   border: 1px solid #ccc;
   border-radius: 4px;
+  width: calc(100% - 100px);
 }
 
 .send-button {
   margin-left: 8px;
   padding: 8px 12px;
-  background-color: #007bff;
-  color: white;
+  background-color: #19C6A5;
+  color: #333;
   border: none;
   border-radius: 4px;
   cursor: pointer;
 }
 
 .send-button:hover {
-  background-color: #0056b3;
+  background-color: #1abc93;
 }
 
+.webcam-container {
+  position: absolute;
+  right: 20px;
+  top: 80px;
+  z-index: 10; // Ensure it appears above other elements
+  border: 3px solid #19C6A5;
+  border-radius: 8px; // Optional: Rounded corners
+
+}

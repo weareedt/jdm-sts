@@ -17,7 +17,7 @@
 
   div.label {
     position: relative;
-    color: #666;
+    color: black;
     transition: color 0.1s ease-in-out;
     padding: 0px 16px;
     z-index: 2;
@@ -25,11 +25,11 @@
   }
 
   div.label.right {
-    margin-left: -8px;
+    margin-left: -5px;
   }
 
   .toggle-background {
-    background-color: #333;
+    background-color: #19C6A5;
     position: absolute;
     top: 0px;
     left: 0px;
@@ -42,13 +42,13 @@
 
   &[data-enabled='true'] {
     div.label.right {
-      color: #fff;
+      color: #333;
     }
   }
 
   &[data-enabled='false'] {
     div.label.left {
-      color: #fff;
+      color: #333;
     }
   }
 }
