@@ -10,13 +10,12 @@ export const WebcamComponent: React.FC = () => {
       {isWebcamEnabled ? (
         <Webcam
           audio={false}
-          height={320}
-          width={240}
+          style={{ width: "100%", height: "100%" }} // Automatically adjusts to container size
           screenshotFormat="image/jpeg"
           videoConstraints={{
             facingMode: 'user',
-            width: { ideal: 240 }, // Width for portrait
-            height: { ideal: 320 }, // Height for portrait
+            width: { ideal: 240 },
+            height: { ideal: 320 },
           }}
         />
       ) : (

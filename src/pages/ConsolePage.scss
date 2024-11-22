@@ -520,14 +520,35 @@ audio {
   background-color: #1abc93;
 }
 
-
 .webcam-container {
-  position: absolute; // Use fixed positioning to keep it in the viewport
-  top: 80px; // Adjust as needed for spacing from the top
-  right: 20px; // Adjust as needed for spacing from the right
-  width: 100; // Allow width to be determined by aspect ratio
-  height: 100; // Set height to 0 to use padding for aspect ratio
-  z-index: 10; 
-  border: 3px solid #19c6a5; 
+  position: absolute;
+  top: 80px; 
+  right: 20px; 
+  width: 100; 
+  height: 100; 
+  z-index: 10;
+  border: 3px solid #19c6a5;
   border-radius: 4px;
+}
+
+@media (min-width: 1439px) {
+  .webcam-container {
+    border: 3px solid #c61961;
+  }
+}
+
+@media (min-width: 786px) and (max-width: 1438px) {
+  .webcam-container {
+    width: 180px;
+    height: 240px;
+    border: 3px solid #968528;
+  }
+}
+
+@media (min-width: 426px) and (max-width: 785px) {
+  .webcam-container {
+    width: 120px;
+    height: 160px;
+    border: 3px solid #19c6a5;
+  }
 }
