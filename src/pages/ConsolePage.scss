@@ -52,6 +52,7 @@
     padding: 8px 10px;
     min-height: 40px;
     justify-content: space-between;
+
     .content-title {
       flex-grow: 1;
       display: flex;
@@ -490,30 +491,59 @@ audio {
   display: flex;
   align-items: center;
   padding: 10px;
-  border-top: 1px solid #ccc;
   position: fixed;
-  bottom: 20px; 
+  bottom: 14px; 
   left: 50%;
   transform: translateX(-50%);
-  width: 400px; 
+  width: 500px; 
+  gap: 10px; 
+  box-sizing: border-box; 
 }
 
 .input-field {
-  flex: 1;
-  padding: 8px;
+  flex-grow: 1;
+  padding: 10px;
   border: 1px solid #ccc;
   border-radius: 4px;
-  width: calc(100% - 100px);
+  box-sizing: border-box; 
 }
 
+@media (min-width: 1439px) {
+  .chat-input {
+    width: 600px; 
+  }
+  .input-field {
+    width: 400px; 
+  }
+}
+
+@media (min-width: 786px) and (max-width: 1438px) {
+  .chat-input {
+    width: 500px; 
+  }
+  .input-field {
+    width: 350px; 
+  }
+}
+
+@media (min-width: 426px) and (max-width: 785px) {
+  .chat-input {
+    width: 200px; 
+  }
+  .input-field {
+    width: 200px; 
+  }
+}
+
+
 .send-button {
-  margin-left: 8px;
-  padding: 8px 12px;
+  padding: 12px 12px; 
   background-color: #19C6A5;
   color: #333;
   border: none;
-  border-radius: 4px;
+  border-radius: 10px;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .send-button:hover {

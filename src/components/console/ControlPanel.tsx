@@ -54,7 +54,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
         )}
       </div>
 
-      <div className="action-button" style={{ position: 'absolute', top: '10px', right: '16px' }}>
+      <div className="action-button" style={{ position: 'absolute', right: '16px' }}>
         <Button
           icon={Zap}
           iconPosition={'end'}

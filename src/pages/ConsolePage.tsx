@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import './ConsolePage.scss';
 
 // Hooks
@@ -10,26 +10,29 @@ import { useWebcam } from '../hooks/useWebcam';
 // Components
 import { ControlPanel } from '../components/console/ControlPanel';
 import { Visualization } from '../components/console/Visualization';
-//import { ChatWindow } from '../components/console/ChatWindow';
 import { ActionControls } from '../components/console/ActionControls';
 import { WebcamComponent } from '../components/console/Webcam';
+import { ChatInput } from '../components/console/ChatWindow';
 
 const LOCAL_RELAY_SERVER_URL = process.env.REACT_APP_LOCAL_RELAY_SERVER_URL || '';
 
-export function ConsolePage() {
+export const ConsolePage: React.FC = () => {
+  // State for user message
+  const [userMessage, setUserMessage] = useState('');
+
   // API Key Management
   const getApiKey = useCallback(() => {
     if (LOCAL_RELAY_SERVER_URL) return '';
-    
+
     const storedKey = localStorage.getItem('tmp::voice_api_key');
     if (storedKey) return storedKey;
-    
+
     const promptedKey = prompt('OpenAI API Key');
     if (promptedKey) {
       localStorage.setItem('tmp::voice_api_key', promptedKey);
       return promptedKey;
     }
-    
+
     return '';
   }, []);
 
@@ -45,15 +48,25 @@ export function ConsolePage() {
     handleSendMessage,
     startRecording,
     stopRecording,
-    changeTurnEndType
+    changeTurnEndType,
   } = useConversation(apiKey, LOCAL_RELAY_SERVER_URL);
-  
 
   const { initializeAudio, handleStartPause } = useAudio();
   const { shaderMaterialRef } = useVisualization(uiRefs.mount, state.animationColor);
   const { isWebcamEnabled, webcamError, checkWebcamPermissions } = useWebcam();
 
-  // Event Handlers
+  // Handle message changes
+  const handleMessageChange = useCallback((message: string) => {
+    setUserMessage(message);
+  }, []);
+
+  // Handle message sending
+  const handleMessageSend = useCallback(() => {
+    console.log('Message Sent:', userMessage);
+    setUserMessage(''); // Clear the input field after sending
+  }, [userMessage]);
+
+  // Reset API Key
   const handleResetApiKey = useCallback(() => {
     const newApiKey = prompt('OpenAI API Key');
     if (newApiKey) {
@@ -63,7 +76,7 @@ export function ConsolePage() {
     }
   }, []);
 
-  
+  // Toggle visibility of content top
   const handleContentTopToggle = useCallback(() => {
     if (uiRefs.contentTop.current) {
       const currentDisplay = window.getComputedStyle(uiRefs.contentTop.current).display;
@@ -71,25 +84,15 @@ export function ConsolePage() {
     }
   }, [uiRefs.contentTop]);
 
-  const handleMessageChange = useCallback((message: string) => {
-    setState(prev => ({ ...prev, userMessage: message }));
-  }, [setState]);
-
-  const handleDeleteItem = useCallback((id: string) => {
-    if (state.isConnected) {
-      setState(prev => ({
-        ...prev,
-        items: prev.items.filter(item => item.id !== id)
-      }));
-    }
-  }, [state.isConnected, setState]);
-
   // Keyboard Event Handler
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         handleContentTopToggle();
-        setState(prev => ({ ...prev, isColorControlVisible: !prev.isColorControlVisible }));
+        setState((prev) => ({
+          ...prev,
+          isColorControlVisible: !prev.isColorControlVisible,
+        }));
       }
     };
 
@@ -109,16 +112,14 @@ export function ConsolePage() {
         contentTopRef={uiRefs.contentTop}
       />
 
-      <div className="content-main"> 
-          <WebcamComponent 
-          />
-          <Visualization
-            mountRef={uiRefs.mount}
-            items={state.items}
-          />
-        <div className="content-logs">
-         
-
+      <div className="content-main">
+        <WebcamComponent />
+        <Visualization mountRef={uiRefs.mount} items={state.items} />
+        <ChatInput
+          userMessage={userMessage}
+          onMessageChange={handleMessageChange}
+          onMessageSend={handleMessageSend}
+        />
           <ActionControls
             isConnected={state.isConnected}
             canPushToTalk={state.canPushToTalk}
@@ -127,27 +128,9 @@ export function ConsolePage() {
             onStartRecording={startRecording}
             onStopRecording={stopRecording}
           />
-
-          {/* Text Input Field */}
-          <div className="chat-input">
-            <input
-              type="text"
-              placeholder="Type your message..."
-              value={state.userMessage}
-              onChange={(e) => handleMessageChange(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  handleSendMessage();
-                }
-              }}
-              className="input-field"
-            />
-            <button onClick={handleSendMessage} className="send-button">
-              Send
-            </button>
-          </div>
         </div>
       </div>
-    </div>
   );
-}
+};
+
+export default ConsolePage;
