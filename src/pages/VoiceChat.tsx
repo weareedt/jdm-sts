@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { RealtimeClient } from '@openai/realtime-api-beta';
+import OpenAI from 'openai';
 import { ItemType } from '@openai/realtime-api-beta/dist/lib/client.js';
 import { WavRecorder, WavStreamPlayer } from '../lib/wavtools/index.js';
 import { WavRenderer } from '../utils/wav_renderer';
@@ -21,6 +22,7 @@ interface AIResponse {
 export const VoiceChat: React.FC<Props> = ({ scrapedContent }) => {
   const apiKey = localStorage.getItem('tmp::voice_api_key') || '';
   const [items, setItems] = useState<ItemType[]>([]);
+  const [userItems, setUserItems] = useState<ItemType[]>([]);
   const [aiResponses, setAIResponses] = useState<AIResponse[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [sessionId] = useState(`session_${Date.now()}`);
@@ -36,6 +38,20 @@ export const VoiceChat: React.FC<Props> = ({ scrapedContent }) => {
       url: process.env.REACT_APP_WS_URL || 'ws://localhost:3001/ws'
     })
   );
+
+  // Initialize OpenAI client for STT with Mesolitica API
+  const openai = useRef(new OpenAI({
+    apiKey: process.env.MESOLITICA_API_KEY || '',
+    baseURL: "https://api.mesolitica.com",
+    dangerouslyAllowBrowser: true
+  }));
+
+  // Helper function to convert audio data to File
+  const convertAudioToFile = (audioData: Int16Array): File => {
+    const uint8Array = new Uint8Array(audioData.buffer);
+    const blob = new Blob([uint8Array], { type: 'audio/wav' });
+    return new File([blob], 'audio.wav', { type: 'audio/wav' });
+  };
 
   const resetAPIKey = useCallback(() => {
     const newApiKey = prompt('OpenAI API Key');
@@ -76,7 +92,9 @@ export const VoiceChat: React.FC<Props> = ({ scrapedContent }) => {
       console.log('RealtimeAPI connected successfully');
 
       setIsConnected(true);
-      setItems(client.conversation.getItems());
+      const allItems = client.conversation.getItems();
+      setItems(allItems);
+      setUserItems(allItems.filter(item => item.role !== 'assistant'));
 
       // Send initial message after connection is established
       const initialMessage = "Hello!";
@@ -89,9 +107,34 @@ export const VoiceChat: React.FC<Props> = ({ scrapedContent }) => {
       await sendMessageToAIServer(initialMessage);
 
       if (client.getTurnDetectionType() === 'server_vad') {
-        await wavRecorder.record((data) => {
+        await wavRecorder.record(async (data) => {
           if (client.isConnected()) {
-            client.appendInputAudio(data.mono);
+            try {
+              // Convert audio data to File
+              const audioFile = convertAudioToFile(data.mono);
+
+              // Transcribe using Mesolitica API
+              const transcription = await openai.current.audio.transcriptions.create({
+                file: audioFile,
+                model: "base",
+                language: "ms",
+              } as any);
+
+              // Send transcribed text and audio to client
+              client.appendInputAudio(new Uint8Array(data.mono.buffer));
+              if (transcription.text) {
+                client.sendUserMessageContent([
+                  {
+                    type: 'input_text',
+                    text: transcription.text,
+                  },
+                ]);
+              }
+            } catch (error) {
+              console.error("Error transcribing audio:", error);
+              // Fall back to sending raw audio if transcription fails
+              client.appendInputAudio(new Uint8Array(data.mono.buffer));
+            }
           }
         });
       }
@@ -114,6 +157,7 @@ export const VoiceChat: React.FC<Props> = ({ scrapedContent }) => {
     try {
       setIsConnected(false);
       setItems([]);
+      setUserItems([]);
       setAIResponses([]);
 
       const client = clientRef.current;
@@ -150,8 +194,9 @@ export const VoiceChat: React.FC<Props> = ({ scrapedContent }) => {
     };
 
     const conversationHandler = async ({ item, delta }: any) => {
-      const items = client.conversation.getItems();
-      setItems(items);
+      const allItems = client.conversation.getItems();
+      setItems(allItems);
+      setUserItems(allItems.filter(item => item.role !== 'assistant'));
 
       if (item && item.role === 'user' && item.formatted.text) {
         await sendMessageToAIServer(item.formatted.text);
@@ -161,7 +206,9 @@ export const VoiceChat: React.FC<Props> = ({ scrapedContent }) => {
     client.on('error', errorHandler);
     client.on('conversation.updated', conversationHandler);
 
-    setItems(client.conversation.getItems());
+    const allItems = client.conversation.getItems();
+    setItems(allItems);
+    setUserItems(allItems.filter(item => item.role !== 'assistant'));
 
     // Cleanup function
     return () => {
@@ -192,36 +239,55 @@ export const VoiceChat: React.FC<Props> = ({ scrapedContent }) => {
           {(items.length > 0 || aiResponses.length > 0) && (
             <div className="content-block conversation">
               <div className="content-block-body" data-conversation-content>
-                {items.map((conversationItem) => (
-                  <div className="conversation-item" key={conversationItem.id}>
-                    <div className={`speaker ${conversationItem.role || ''}`}>
-                      <div>
-                        {(conversationItem.role || conversationItem.type).replaceAll('_', ' ')}
+                <div className="overlay-log user-log">
+                  {userItems.map((conversationItem) => (
+                    <div className="conversation-item" key={conversationItem.id}>
+                      <div className={`speaker ${conversationItem.role || ''}`}>
+                        <div>
+                          {(conversationItem.role || conversationItem.type).replaceAll('_', ' ')}
+                        </div>
+                        <div className="close" onClick={() => deleteConversationItem(conversationItem.id)}>
+                          <X />
+                        </div>
                       </div>
-                      <div className="close" onClick={() => deleteConversationItem(conversationItem.id)}>
-                        <X />
-                      </div>
-                    </div>
-                    <div className={`speaker-content`}>
-                      {conversationItem.formatted.transcript || conversationItem.formatted.text || '(truncated)'}
-                    </div>
-                  </div>
-                ))}
-                {aiResponses.map((response) => (
-                  <div className="conversation-item" key={response.id}>
-                    <div className={`speaker ${response.role}`}>
-                      <div>
-                        {response.role}
-                      </div>
-                      <div className="close" onClick={() => deleteConversationItem(response.id)}>
-                        <X />
+                      <div className={`speaker-content`}>
+                        {conversationItem.formatted.transcript || conversationItem.formatted.text || '(truncated)'}
                       </div>
                     </div>
-                    <div className={`speaker-content`}>
-                      {response.text}
+                  ))}
+                </div>
+                <div className="overlay-log assistant-log">
+                  {items.filter(item => item.role === 'assistant').map((conversationItem) => (
+                    <div className="conversation-item" key={conversationItem.id}>
+                      <div className={`speaker ${conversationItem.role}`}>
+                        <div>
+                          {conversationItem.role}
+                        </div>
+                        <div className="close" onClick={() => deleteConversationItem(conversationItem.id)}>
+                          <X />
+                        </div>
+                      </div>
+                      <div className={`speaker-content`}>
+                        {conversationItem.formatted.transcript || conversationItem.formatted.text || '(truncated)'}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                  {aiResponses.map((response) => (
+                    <div className="conversation-item" key={response.id}>
+                      <div className={`speaker ${response.role}`}>
+                        <div>
+                          {response.role}
+                        </div>
+                        <div className="close" onClick={() => deleteConversationItem(response.id)}>
+                          <X />
+                        </div>
+                      </div>
+                      <div className={`speaker-content`}>
+                        {response.text}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           )}
