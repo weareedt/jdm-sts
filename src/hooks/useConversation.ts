@@ -1,6 +1,5 @@
 import { useCallback, useRef, useState, useEffect } from 'react';
 import { RealtimeClient } from '@openai/realtime-api-beta';
-import OpenAI from 'openai';
 import { WavRecorder, WavStreamPlayer } from '../lib/wavtools/index.js';
 import { instructions } from '../utils/conversation_config.js';
 import { ConsoleState, UseConversationReturn } from '../types/console';
@@ -32,7 +31,8 @@ export const useConversation = (apiKey: string, LOCAL_RELAY_SERVER_URL: string):
   });
 
   const isFirefox = navigator.userAgent.match(/Firefox\/([1]{1}[7-9]{1}|[2-9]{1}[0-9]{1})/);
-  const sampleRate = isFirefox ? 44100 : 24000;
+  const sampleRate = isFirefox ? 24000 : 24000;
+
   // Audio instances
   const recorder = useRef<WavRecorder | null>(null);
   const streamPlayer = useRef<WavStreamPlayer>(new WavStreamPlayer({ sampleRate: sampleRate }));
@@ -41,25 +41,11 @@ export const useConversation = (apiKey: string, LOCAL_RELAY_SERVER_URL: string):
       LOCAL_RELAY_SERVER_URL
         ? { url: LOCAL_RELAY_SERVER_URL }
         : {
-          apiKey: apiKey,
-          dangerouslyAllowAPIKeyInBrowser: true,
-        }
+            apiKey: apiKey,
+            dangerouslyAllowAPIKeyInBrowser: true,
+          }
     )
   );
-
-  // Initialize OpenAI client for STT with Mesolitica API
-  const openai = useRef(new OpenAI({
-    apiKey: process.env.MESOLITICA_API_KEY || '',
-    baseURL: "https://api.mesolitica.com",
-    dangerouslyAllowBrowser: true
-  }));
-
-  // Helper function to convert audio data to File
-  const convertAudioToFile = (audioData: Int16Array): File => {
-    const uint8Array = new Uint8Array(audioData.buffer);
-    const blob = new Blob([uint8Array], { type: 'audio/wav' });
-    return new File([blob], 'audio.wav', { type: 'audio/wav' });
-  };
 
   // UI refs
   const uiRefs = {
@@ -77,21 +63,14 @@ export const useConversation = (apiKey: string, LOCAL_RELAY_SERVER_URL: string):
     if (!currentClient) return;
 
     // Set instructions and transcription
-    currentClient.updateSession({
+    currentClient.updateSession({ 
       instructions,
-      input_audio_transcription: {
-        model: 'whisper-1'
-      }
+      input_audio_transcription: { model: 'whisper-1' }
     });
 
     // Handle realtime events
     currentClient.on('realtime.event', (realtimeEvent: any) => {
       setState(prev => {
-        // Only add events that are not from assistant
-        if (realtimeEvent.event?.role === 'assistant') {
-          return prev;
-        }
-
         const lastEvent = prev.realtimeEvents[prev.realtimeEvents.length - 1];
         if (lastEvent?.event.type === realtimeEvent.event.type) {
           lastEvent.count = (lastEvent.count || 0) + 1;
@@ -124,11 +103,11 @@ export const useConversation = (apiKey: string, LOCAL_RELAY_SERVER_URL: string):
     currentClient.on('conversation.updated', async ({ item, delta }: any) => {
       if (!streamPlayer.current) return;
       const items = currentClient.conversation.getItems();
-
+      
       if (delta?.audio) {
         streamPlayer.current.add16BitPCM(delta.audio, item.id);
       }
-
+      
       if (item.status === 'completed' && item.formatted.audio?.length) {
         const wavFile = await WavRecorder.decode(
           item.formatted.audio,
@@ -137,7 +116,7 @@ export const useConversation = (apiKey: string, LOCAL_RELAY_SERVER_URL: string):
         );
         item.formatted.file = wavFile;
       }
-
+      
       setState(prev => ({ ...prev, items }));
     });
 
@@ -175,34 +154,7 @@ export const useConversation = (apiKey: string, LOCAL_RELAY_SERVER_URL: string):
       ]);
 
       if (client.current.getTurnDetectionType() === 'server_vad') {
-        await newRecorder.record(async (data) => {
-          try {
-            // Convert audio data to File
-            const audioFile = convertAudioToFile(data.mono);
-
-            // Transcribe using Mesolitica API
-            const transcription = await openai.current.audio.transcriptions.create({
-              file: audioFile,
-              model: "base",
-              language: "ms",
-            } as any);
-
-            // Send transcribed text to client
-            client.current.appendInputAudio(new Uint8Array(data.mono.buffer));
-            if (transcription.text) {
-              client.current.sendUserMessageContent([
-                {
-                  type: 'input_text',
-                  text: transcription.text,
-                },
-              ]);
-            }
-          } catch (error) {
-            console.error("Error transcribing audio:", error);
-            // Fall back to sending raw audio if transcription fails
-            client.current.appendInputAudio(new Uint8Array(data.mono.buffer));
-          }
-        });
+        await newRecorder.record((data) => client.current.appendInputAudio(data.mono));
       }
     } catch (error) {
       console.error("Error connecting:", error);
@@ -242,7 +194,7 @@ export const useConversation = (apiKey: string, LOCAL_RELAY_SERVER_URL: string):
       console.warn("Client is not connected. Message not sent.");
       return;
     }
-
+  
     if (state.userMessage.trim() === '') return;
 
     try {
@@ -265,7 +217,7 @@ export const useConversation = (apiKey: string, LOCAL_RELAY_SERVER_URL: string):
           text: `AI Server Response: ${aiResponse.response.text} (Emotion: ${aiResponse.response.emotion})`,
         },
       ]);
-
+  
       setState(prev => ({ ...prev, userMessage: '' }));
     } catch (error) {
       console.error("Error sending message:", error);
@@ -274,7 +226,7 @@ export const useConversation = (apiKey: string, LOCAL_RELAY_SERVER_URL: string):
         {
           type: 'input_text',
           text: state.userMessage,
-        }
+        },
       ]);
       setState(prev => ({ ...prev, userMessage: '' }));
     }
@@ -285,41 +237,14 @@ export const useConversation = (apiKey: string, LOCAL_RELAY_SERVER_URL: string):
     if (!client.current || !streamPlayer.current || !recorder.current) return;
 
     setState(prev => ({ ...prev, isRecording: true }));
-
+    
     const trackSampleOffset = await streamPlayer.current.interrupt();
     if (trackSampleOffset?.trackId) {
       const { trackId, offset } = trackSampleOffset;
       await client.current.cancelResponse(trackId, offset);
     }
-
-    await recorder.current.record(async (data) => {
-      try {
-        // Convert audio data to File
-        const audioFile = convertAudioToFile(data.mono);
-
-        // Transcribe using Mesolitica API
-        const transcription = await openai.current.audio.transcriptions.create({
-          file: audioFile,
-          model: "base",
-          language: "ms",
-        } as any);
-
-        // Send transcribed text to client
-        client.current.appendInputAudio(new Uint8Array(data.mono.buffer));
-        if (transcription.text) {
-          client.current.sendUserMessageContent([
-            {
-              type: 'input_text',
-              text: transcription.text,
-            },
-          ]);
-        }
-      } catch (error) {
-        console.error("Error transcribing audio:", error);
-        // Fall back to sending raw audio if transcription fails
-        client.current.appendInputAudio(new Uint8Array(data.mono.buffer));
-      }
-    });
+    
+    await recorder.current.record((data) => client.current.appendInputAudio(data.mono));
   }, []);
 
   const stopRecording = useCallback(async () => {
@@ -333,46 +258,19 @@ export const useConversation = (apiKey: string, LOCAL_RELAY_SERVER_URL: string):
   // Handle turn end type change
   const changeTurnEndType = useCallback(async (value: string) => {
     if (!client.current || !recorder.current) return;
-
+    
     if (value === 'none' && recorder.current.getStatus() === 'recording') {
       await recorder.current.pause();
     }
-
+    
     client.current.updateSession({
       turn_detection: value === 'none' ? null : { type: 'server_vad' },
     });
-
+    
     if (value === 'server_vad' && client.current.isConnected()) {
-      await recorder.current.record(async (data) => {
-        try {
-          // Convert audio data to File
-          const audioFile = convertAudioToFile(data.mono);
-
-          // Transcribe using Mesolitica API
-          const transcription = await openai.current.audio.transcriptions.create({
-            file: audioFile,
-            model: "base",
-            language: "ms",
-          } as any);
-
-          // Send transcribed text to client
-          client.current.appendInputAudio(new Uint8Array(data.mono.buffer));
-          if (transcription.text) {
-            client.current.sendUserMessageContent([
-              {
-                type: 'input_text',
-                text: transcription.text,
-              },
-            ]);
-          }
-        } catch (error) {
-          console.error("Error transcribing audio:", error);
-          // Fall back to sending raw audio if transcription fails
-          client.current.appendInputAudio(new Uint8Array(data.mono.buffer));
-        }
-      });
+      await recorder.current.record((data) => client.current.appendInputAudio(data.mono));
     }
-
+    
     setState(prev => ({ ...prev, canPushToTalk: value === 'none' }));
   }, []);
 
