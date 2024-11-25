@@ -11,7 +11,7 @@ export class WavStreamPlayer {
    * @param {{sampleRate?: number}} options
    * @returns {WavStreamPlayer}
    */
-  constructor({ sampleRate = 44100 } = {}) {
+  constructor({ sampleRate = 24000 } = {}) {
     this.scriptSrc = StreamProcessorSrc;
     this.sampleRate = sampleRate;
     this.context = null;

@@ -12,28 +12,16 @@ type Props = {
   scrapedContent: string;
 };
 
-interface AIResponse {
-  id: string;
-  role: 'assistant';
-  text: string;
-}
-
 export const VoiceChat: React.FC<Props> = ({ scrapedContent }) => {
   const apiKey = localStorage.getItem('tmp::voice_api_key') || '';
   const [items, setItems] = useState<ItemType[]>([]);
-  const [aiResponses, setAIResponses] = useState<AIResponse[]>([]);
   const [isConnected, setIsConnected] = useState(false);
-  const [sessionId] = useState(`session_${Date.now()}`);
 
   const wavRecorderRef = useRef<WavRecorder>(new WavRecorder({ sampleRate: 24000 }));
-  
-  // Initialize RealtimeClient with proper configuration
   const clientRef = useRef<RealtimeClient>(
     new RealtimeClient({
       apiKey: apiKey,
       dangerouslyAllowAPIKeyInBrowser: true,
-      debug: true, // Enable debug mode for better error logging
-      url: process.env.REACT_APP_WS_URL || 'ws://localhost:3001/ws'
     })
   );
 
@@ -45,128 +33,85 @@ export const VoiceChat: React.FC<Props> = ({ scrapedContent }) => {
     }
   }, []);
 
-  const sendMessageToAIServer = async (text: string) => {
-    try {
-      const response = await sendMessage({
-        message: text,
-        session_id: sessionId
-      });
-      
-      const newResponse: AIResponse = {
-        id: `ai_${Date.now()}`,
-        role: 'assistant',
-        text: response.response.text
-      };
-      setAIResponses(prev => [...prev, newResponse]);
-    } catch (error) {
-      console.error('Error sending message to AI server:', error);
-    }
-  };
-
   const connectConversation = useCallback(async () => {
-    try {
-      const client = clientRef.current;
-      const wavRecorder = wavRecorderRef.current;
+    const client = clientRef.current;
+    const wavRecorder = wavRecorderRef.current;
 
-      // Initialize audio recording first
-      await wavRecorder.begin();
+    setIsConnected(true);
+    setItems(client.conversation.getItems());
 
-      // Then connect to the realtime API
-      await client.connect();
-      console.log('RealtimeAPI connected successfully');
+    await wavRecorder.begin();
+    await client.connect();
 
-      setIsConnected(true);
-      setItems(client.conversation.getItems());
+    client.sendUserMessageContent([
+      {
+        type: `input_text`,
+        text: `Hello!`,
+      },
+    ]);
 
-      // Send initial message after connection is established
-      const initialMessage = "Hello!";
-      await client.sendUserMessageContent([
-        {
-          type: 'input_text',
-          text: initialMessage,
-        },
-      ]);
-      await sendMessageToAIServer(initialMessage);
-
-      if (client.getTurnDetectionType() === 'server_vad') {
-        await wavRecorder.record((data) => {
-          if (client.isConnected()) {
-            client.appendInputAudio(data.mono);
-          }
-        });
-      }
-    } catch (error) {
-      console.error('Error connecting:', error);
-      setIsConnected(false);
-      
-      // Clean up on error
-      try {
-        const wavRecorder = wavRecorderRef.current;
-        await wavRecorder.end();
-    
-      } catch (cleanupError) {
-        console.error('Error during cleanup:', cleanupError);
-      }
+    if (client.getTurnDetectionType() === 'server_vad') {
+      await wavRecorder.record((data) => client.appendInputAudio(data.mono));
     }
   }, []);
 
   const disconnectConversation = useCallback(async () => {
-    try {
-      setIsConnected(false);
-      setItems([]);
-      setAIResponses([]);
+    setIsConnected(false);
+    setItems([]);
 
-      const client = clientRef.current;
-      await client.disconnect();
+    const client = clientRef.current;
+    client.disconnect();
 
-      const wavRecorder = wavRecorderRef.current;
-      await wavRecorder.end();
-
-    } catch (error) {
-      console.error('Error disconnecting:', error);
-    }
+    const wavRecorder = wavRecorderRef.current;
+    await wavRecorder.end();
   }, []);
 
   const deleteConversationItem = useCallback(async (id: string) => {
     const client = clientRef.current;
     client.deleteItem(id);
-    setAIResponses(prev => prev.filter(response => response.id !== id));
   }, []);
 
   useEffect(() => {
     const client = clientRef.current;
 
-    // Set up client configuration
     client.updateSession({ instructions: scrapedContent });
     client.updateSession({ input_audio_transcription: { model: 'whisper-1' } });
     client.updateSession({ voice: 'alloy' });
 
-    // Set up event listeners
-    const errorHandler = (event: any) => {
-      console.error('RealtimeAPI error:', event);
-      if (!client.isConnected()) {
-        setIsConnected(false);
-      }
-    };
-
-    const conversationHandler = async ({ item, delta }: any) => {
+    client.on('error', (event: any) => console.error(event));
+    
+    // Handle conversation updates with JDN integration
+    client.on('conversation.updated', async ({ item, delta }: any) => {
       const items = client.conversation.getItems();
-      setItems(items);
+      
+      console.log("Conversation Item:", item);
+      // If this is a transcribed user message
+      if (item.role === 'user' && item.formatted.transcript) {
+        try {
+          // Send transcribed text to JDN server
+          const jdnResponse = await sendMessage({
+            message: item.formatted.transcript,
+            session_id: '123456789'
+          });
 
-      if (item && item.role === 'user' && item.formatted.text) {
-        await sendMessageToAIServer(item.formatted.text);
+          console.log("JDN Server Response:", jdnResponse);
+
+          // Send JDN response back to conversation
+          client.sendUserMessageContent([
+            {
+              type: 'input_text',
+              text: `AI Server Response: ${jdnResponse.response.text} (Emotion: ${jdnResponse.response.emotion})`,
+            },
+          ]);
+        } catch (error) {
+          console.error("Error querying JDN server:", error);
+        }
       }
-    };
+      
+      setItems(items);
+    });
 
-    client.on('error', errorHandler);
-    client.on('conversation.updated', conversationHandler);
-
-    setItems(client.conversation.getItems());
-
-    // Cleanup function
     return () => {
-      client.off('error', errorHandler);
-      client.off('conversation.updated', conversationHandler);
       client.reset();
     };
   }, [scrapedContent]);
@@ -189,7 +134,7 @@ export const VoiceChat: React.FC<Props> = ({ scrapedContent }) => {
       </div>
       <div className="content-main">
         <div className="content-logs">
-          {(items.length > 0 || aiResponses.length > 0) && (
+          {items.length > 0 && (
             <div className="content-block conversation">
               <div className="content-block-body" data-conversation-content>
                 {items.map((conversationItem) => (
@@ -204,21 +149,6 @@ export const VoiceChat: React.FC<Props> = ({ scrapedContent }) => {
                     </div>
                     <div className={`speaker-content`}>
                       {conversationItem.formatted.transcript || conversationItem.formatted.text || '(truncated)'}
-                    </div>
-                  </div>
-                ))}
-                {aiResponses.map((response) => (
-                  <div className="conversation-item" key={response.id}>
-                    <div className={`speaker ${response.role}`}>
-                      <div>
-                        {response.role}
-                      </div>
-                      <div className="close" onClick={() => deleteConversationItem(response.id)}>
-                        <X />
-                      </div>
-                    </div>
-                    <div className={`speaker-content`}>
-                      {response.text}
                     </div>
                   </div>
                 ))}

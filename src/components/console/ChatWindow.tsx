@@ -22,6 +22,9 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   onMessageSend,
   onDeleteItem
 }) => {
+  const userItems = items.filter(item => item.role !== 'assistant');
+  const assistantItems = items.filter(item => item.role === 'assistant');
+
   return (
     <div className={`chat-window ${isMinimized ? 'minimized' : ''}`}>
       <div className="chat-header" onClick={onMinimizeToggle}>
@@ -39,7 +42,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           <div className="content-block-title">Conversation</div>
           <div className="content-block-body" data-conversation-content>
             {!items.length && `awaiting connection..`}
-            {items.map((conversationItem) => (
+            {userItems.map((conversationItem) => (
               <div className="conversation-item" key={conversationItem.id}>
                 <div className={`speaker ${conversationItem.role || ''}`}>
                   <div>
@@ -71,13 +74,27 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                             : conversationItem.formatted.text || '(item sent)')}
                       </div>
                     )}
-                  {!conversationItem.formatted.tool &&
-                    conversationItem.role === 'assistant' && (
-                      <div>
-                        {conversationItem.formatted.transcript ||
-                          conversationItem.formatted.text || '(truncated)'}
-                      </div>
-                    )}
+                </div>
+              </div>
+            ))}
+            {assistantItems.map((conversationItem) => (
+              <div className="conversation-item" key={conversationItem.id}>
+                <div className={`speaker ${conversationItem.role}`}>
+                  <div>
+                    {conversationItem.role}
+                  </div>
+                  <div
+                    className="close"
+                    onClick={() => onDeleteItem(conversationItem.id)}
+                  >
+                    <X />
+                  </div>
+                </div>
+                <div className={`speaker-content`} style={{ color: 'white' }}>
+                  <div>
+                    {conversationItem.formatted.transcript ||
+                      conversationItem.formatted.text || '(truncated)'}
+                  </div>
                 </div>
               </div>
             ))}

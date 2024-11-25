@@ -3,10 +3,13 @@ import { ItemType } from '@openai/realtime-api-beta/dist/lib/client.js';
 
 interface VisualizationProps {
   mountRef: React.RefObject<HTMLDivElement>;
-  items: ItemType[];
+  items: any[];
 }
 
-export const Visualization: React.FC<VisualizationProps> = ({ mountRef, items }) => {
+export const Visualization: React.FC<VisualizationProps> = ({
+  mountRef,
+  items,
+}) => {
   return (
     <div className="content-block events">
       <div
@@ -20,10 +23,10 @@ export const Visualization: React.FC<VisualizationProps> = ({ mountRef, items })
         {/* Overlay log for the assistant's latest message */}
         {items.length > 0 && (
           <div className="overlay-log assistant-log">
-            {items
-              .filter((item) => item.role === 'assistant')
-              .slice(-1)[0]?.formatted.transcript ||
-              items.filter((item) => item.role === 'assistant').slice(-1)[0]?.formatted.text ||
+            {items.filter((item) => item.role === 'assistant').slice(-1)[0]
+              ?.formatted.transcript ||
+              items.filter((item) => item.role === 'assistant').slice(-1)[0]
+                ?.formatted.text ||
               '(No assistant response)'}
           </div>
         )}
@@ -31,10 +34,10 @@ export const Visualization: React.FC<VisualizationProps> = ({ mountRef, items })
         {/* Overlay log for the user's latest transcript */}
         {items.length > 0 && (
           <div className="overlay-log user-log">
-            {items
-              .filter((item) => item.role === 'user')
-              .slice(-1)[0]?.formatted.transcript ||
-              items.filter((item) => item.role === 'user').slice(-1)[0]?.formatted.text ||
+            {items.filter((item) => item.role === 'user').slice(-1)[0]
+              ?.formatted.transcript ||
+              items.filter((item) => item.role === 'user').slice(-1)[0]
+                ?.content?.[0].text ||
               '(No user input)'}
           </div>
         )}
