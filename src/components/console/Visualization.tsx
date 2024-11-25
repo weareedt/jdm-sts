@@ -1,14 +1,19 @@
 import React from 'react';
 import { ItemType } from '@openai/realtime-api-beta/dist/lib/client.js';
+import { AudioVisualization } from './AudioVisualization';
 
 interface VisualizationProps {
   mountRef: React.RefObject<HTMLDivElement>;
   items: any[];
+  wavRecorder?: any;
+  wavStreamPlayer?: any;
 }
 
 export const Visualization: React.FC<VisualizationProps> = ({
   mountRef,
   items,
+  wavRecorder,
+  wavStreamPlayer,
 }) => {
   return (
     <div className="content-block events">
@@ -20,6 +25,17 @@ export const Visualization: React.FC<VisualizationProps> = ({
           height: '100%',
         }}
       >
+        {/* Three.js visualization container */}
+        <div className="threejs-container" style={{ width: '100%', height: 'calc(100% - 120px)' }} />
+
+        {/* Canvas-based audio visualization */}
+        {wavRecorder && wavStreamPlayer && (
+          <AudioVisualization
+            wavRecorder={wavRecorder}
+            wavStreamPlayer={wavStreamPlayer}
+          />
+        )}
+
         {/* Overlay log for the assistant's latest message */}
         {items.length > 0 && (
           <div className="overlay-log assistant-log">

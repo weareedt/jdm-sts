@@ -158,6 +158,28 @@ export const useConversation = (apiKey: string, LOCAL_RELAY_SERVER_URL: string):
         },
       ]);
 
+      // Send a POST request to webhook URL
+      await fetch('https://hooks.spline.design/0AmP-aHvvxs', {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `qZz4w4WlZgUqvmN8LvuFHtCdYRuxM8pUrPFuI_Woetk`,
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          "WebhookTest": "Hello, successsssla"
+        })
+      }).then(response => {
+        if (!response.ok) {
+          console.error("Webhook request failed:", response.statusText);
+        } else {
+          console.log("Webhook request successful!");
+        }
+      }).catch(error => {
+        console.error("Error sending webhook request:", error);
+      });
+
       if (client.current.getTurnDetectionType() === 'server_vad') {
         await newRecorder.record((data) => client.current.appendInputAudio(data.mono));
       }
@@ -169,8 +191,6 @@ export const useConversation = (apiKey: string, LOCAL_RELAY_SERVER_URL: string):
 
   // Disconnect conversation
   const disconnectConversation = useCallback(async () => {
-    if (!client.current || !streamPlayer.current || !recorder.current) return;
-
     setState(prev => ({
       ...prev,
       isConnected: false,
@@ -184,13 +204,20 @@ export const useConversation = (apiKey: string, LOCAL_RELAY_SERVER_URL: string):
       marker: null
     }));
 
-    client.current.disconnect();
-
-    if (recorder.current.getStatus() === 'recording') {
-      await recorder.current.end();
+    const currentClient = client.current;
+    if (currentClient) {
+      currentClient.disconnect();
     }
 
-    await streamPlayer.current.interrupt();
+    const currentRecorder = recorder.current;
+    if (currentRecorder?.getStatus() === 'recording') {
+      await currentRecorder.end();
+    }
+
+    const currentStreamPlayer = streamPlayer.current;
+    if (currentStreamPlayer) {
+      await currentStreamPlayer.interrupt();
+    }
   }, []);
 
   // Delete conversation item
@@ -338,27 +365,41 @@ export const useConversation = (apiKey: string, LOCAL_RELAY_SERVER_URL: string):
     }
   }, [state.isConnected, state.userMessage]);
 
-  // Handle recording
+  /**
+   * In push-to-talk mode, start recording
+   * .appendInputAudio() for each sample
+   */
   const startRecording = useCallback(async () => {
-    if (!client.current || !streamPlayer.current || !recorder.current) return;
-
     setState(prev => ({ ...prev, isRecording: true }));
     
-    const trackSampleOffset = await streamPlayer.current.interrupt();
+    const currentClient = client.current;
+    const currentRecorder = recorder.current;
+    const currentStreamPlayer = streamPlayer.current;
+
+    if (!currentClient || !currentRecorder || !currentStreamPlayer) return;
+
+    const trackSampleOffset = await currentStreamPlayer.interrupt();
     if (trackSampleOffset?.trackId) {
       const { trackId, offset } = trackSampleOffset;
-      await client.current.cancelResponse(trackId, offset);
+      await currentClient.cancelResponse(trackId, offset);
     }
     
-    await recorder.current.record((data) => client.current.appendInputAudio(data.mono));
+    await currentRecorder.record((data) => currentClient.appendInputAudio(data.mono));
   }, []);
 
+  /**
+   * In push-to-talk mode, stop recording
+   */
   const stopRecording = useCallback(async () => {
-    if (!client.current || !recorder.current) return;
-
     setState(prev => ({ ...prev, isRecording: false }));
-    await recorder.current.pause();
-    client.current.createResponse();
+
+    const currentClient = client.current;
+    const currentRecorder = recorder.current;
+
+    if (!currentClient || !currentRecorder) return;
+
+    await currentRecorder.pause();
+    currentClient.createResponse();
   }, []);
 
   // Handle turn end type change
