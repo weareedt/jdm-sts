@@ -27,11 +27,16 @@ export const useConversation = (apiKey: string, LOCAL_RELAY_SERVER_URL: string):
     isColorControlVisible: true,
     animationColor: '#ffff00',
     startTime: new Date().toISOString(),
-    eventsScrollHeight: 0
+    eventsScrollHeight: 0,
+    audioContext: null,
+    sound: null,
+    analyser: null,
+    isPlaying: false,
+    isAudioInitialized: false
   });
 
   const isFirefox = navigator.userAgent.match(/Firefox\/([1]{1}[7-9]{1}|[2-9]{1}[0-9]{1})/);
-  const sampleRate = isFirefox ? 24000 : 24000;
+  const sampleRate = 24000;
 
   // Audio instances
   const recorder = useRef<WavRecorder | null>(null);
@@ -130,7 +135,7 @@ export const useConversation = (apiKey: string, LOCAL_RELAY_SERVER_URL: string):
     if (!client.current || !streamPlayer.current) return;
 
     // Create new recorder
-    const newRecorder = new WavRecorder({ sampleRate: 44100 });
+    const newRecorder = new WavRecorder({ sampleRate: 24000 });
     recorder.current = newRecorder;
 
     try {
@@ -188,6 +193,107 @@ export const useConversation = (apiKey: string, LOCAL_RELAY_SERVER_URL: string):
     await streamPlayer.current.interrupt();
   }, []);
 
+  // Delete conversation item
+  const deleteConversationItem = useCallback(async (id: string) => {
+    if (!client.current) return;
+    client.current.deleteItem(id);
+  }, []);
+
+  // Toggle content top display
+  const toggleContentTopDisplay = useCallback(() => {
+    if (uiRefs.contentTop.current) {
+      const currentDisplay = window.getComputedStyle(uiRefs.contentTop.current).display;
+      uiRefs.contentTop.current.style.display = currentDisplay === 'none' ? 'flex' : 'none';
+    }
+  }, []);
+
+  // Toggle minimize
+  const toggleMinimize = useCallback(() => {
+    setState(prev => ({ ...prev, isMinimized: !prev.isMinimized }));
+  }, []);
+
+  // Toggle color control
+  const toggleColorControl = useCallback(() => {
+    setState(prev => ({ ...prev, isColorControlVisible: !prev.isColorControlVisible }));
+  }, []);
+
+  // Handle color change
+  const handleColorChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedColor = e.target.value;
+    setState(prev => ({ ...prev, animationColor: selectedColor }));
+
+    const rgbColor = new THREE.Color(selectedColor);
+    if (uiRefs.shaderMaterial.current) {
+      uiRefs.shaderMaterial.current.uniforms.u_color1.value.setRGB(
+        rgbColor.r,
+        rgbColor.g,
+        rgbColor.b
+      );
+      uiRefs.shaderMaterial.current.uniforms.u_color2.value.setRGB(
+        rgbColor.r,
+        rgbColor.g,
+        rgbColor.b
+      );
+    }
+  }, []);
+
+  // Handle sphere click
+  const handleSphereClick = useCallback(async () => {
+    if (!state.isAudioInitialized) {
+      try {
+        const newAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const listener = new THREE.AudioListener();
+        const sound = new THREE.Audio(listener);
+        const analyser = new THREE.AudioAnalyser(sound, 32);
+        
+        setState(prev => ({ 
+          ...prev, 
+          isAudioInitialized: true,
+          audioContext: newAudioContext,
+          sound,
+          analyser
+        }));
+      } catch (error) {
+        console.error("Error initializing audio:", error);
+      }
+    }
+  }, [state.isAudioInitialized]);
+
+  // Initialize audio
+  const initializeAudio = useCallback(() => {
+    if (!state.audioContext) {
+      const newAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const listener = new THREE.AudioListener();
+      const newSound = new THREE.Audio(listener);
+      const newAnalyser = new THREE.AudioAnalyser(newSound, 32);
+
+      setState(prev => ({
+        ...prev,
+        audioContext: newAudioContext,
+        sound: newSound,
+        analyser: newAnalyser
+      }));
+
+      const audioLoader = new THREE.AudioLoader();
+      audioLoader.load('/static/Beats.mp3', (buffer) => {
+        newSound.setBuffer(buffer);
+        newSound.setLoop(true);
+        newSound.setVolume(0.5);
+      });
+    }
+  }, [state.audioContext]);
+
+  // Handle start/pause
+  const handleStartPause = useCallback(() => {
+    initializeAudio();
+    if (state.isPlaying && state.sound) {
+      state.sound.pause();
+    } else if (state.sound) {
+      state.sound.play();
+    }
+    setState(prev => ({ ...prev, isPlaying: !prev.isPlaying }));
+  }, [state.isPlaying, state.sound, initializeAudio]);
+
   // Handle message sending
   const handleSendMessage = useCallback(async () => {
     if (!client.current || !state.isConnected) {
@@ -230,7 +336,7 @@ export const useConversation = (apiKey: string, LOCAL_RELAY_SERVER_URL: string):
       ]);
       setState(prev => ({ ...prev, userMessage: '' }));
     }
-  }, [state.isConnected, state.userMessage, state.startTime]);
+  }, [state.isConnected, state.userMessage]);
 
   // Handle recording
   const startRecording = useCallback(async () => {
@@ -280,6 +386,14 @@ export const useConversation = (apiKey: string, LOCAL_RELAY_SERVER_URL: string):
     uiRefs,
     connectConversation,
     disconnectConversation,
+    deleteConversationItem,
+    toggleContentTopDisplay,
+    toggleMinimize,
+    toggleColorControl,
+    handleColorChange,
+    handleSphereClick,
+    initializeAudio,
+    handleStartPause,
     handleSendMessage,
     startRecording,
     stopRecording,

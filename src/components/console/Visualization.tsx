@@ -10,7 +10,6 @@ export const Visualization: React.FC<VisualizationProps> = ({
   mountRef,
   items,
 }) => {
-  console.log('items', items);
   return (
     <div className="content-block events">
       <div

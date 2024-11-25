@@ -5,6 +5,7 @@ import { vertexShader, fragmentShader } from '../utils/shaders';
 export const useVisualization = (mountRef: React.RefObject<HTMLDivElement>, animationColor: string) => {
   const shaderMaterialRef = useRef<THREE.ShaderMaterial | null>(null);
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
 
   useEffect(() => {
     if (!mountRef.current) return;
@@ -47,7 +48,7 @@ export const useVisualization = (mountRef: React.RefObject<HTMLDivElement>, anim
     scene.add(sphere);
 
     // Click handler
-    const onClick = (event: MouseEvent) => {
+    const onClick = async (event: MouseEvent) => {
       const canvas = renderer.domElement;
       const rect = canvas.getBoundingClientRect();
       const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -59,7 +60,7 @@ export const useVisualization = (mountRef: React.RefObject<HTMLDivElement>, anim
 
       const intersects = raycaster.intersectObjects(scene.children);
       if (intersects.length > 0 && intersects[0].object.userData.clickable) {
-        initAudio();
+        await initAudio();
       }
     };
 
@@ -67,13 +68,15 @@ export const useVisualization = (mountRef: React.RefObject<HTMLDivElement>, anim
 
     // Audio setup
     const initAudio = async () => {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const newAnalyser = audioContext.createAnalyser();
-      newAnalyser.fftSize = 256;
-
       try {
+        if (!audioContextRef.current) {
+          audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+        }
+        const newAnalyser = audioContextRef.current.createAnalyser();
+        newAnalyser.fftSize = 256;
+
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const source = audioContext.createMediaStreamSource(stream);
+        const source = audioContextRef.current.createMediaStreamSource(stream);
         source.connect(newAnalyser);
         setAnalyser(newAnalyser);
       } catch (error) {
@@ -165,6 +168,9 @@ export const useVisualization = (mountRef: React.RefObject<HTMLDivElement>, anim
       renderer.domElement.removeEventListener('click', onClick);
       cancelAnimationFrame(animationFrame);
       mountRef.current?.removeChild(renderer.domElement);
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+      }
     };
   }, [animationColor]);
 

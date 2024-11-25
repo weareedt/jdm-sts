@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import * as THREE from 'three';
-import { AudioState } from '../types/console';
+import { ConsoleState } from '../types/console';
 import { initializeAudioContext, initializeAudioForMusic } from '../utils/audio/audioProcessor';
 
+type AudioStateSubset = Pick<ConsoleState, 'audioContext' | 'sound' | 'analyser' | 'isPlaying' | 'isAudioInitialized'>;
+
 export const useAudio = () => {
-  const [audioState, setAudioState] = useState<AudioState>({
+  const [audioState, setAudioState] = useState<AudioStateSubset>({
     audioContext: null,
     sound: null,
     analyser: null,

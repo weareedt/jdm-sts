@@ -5,6 +5,7 @@ import { WavRecorder, WavStreamPlayer } from '../lib/wavtools/index.js';
 import { WavRenderer } from '../utils/wav_renderer';
 import { X, Edit, Zap } from 'react-feather';
 import { Button } from '../components/button/Button';
+import { sendMessage } from '../utils/api';
 import './VoiceChat.scss';
 
 type Props = {
@@ -78,12 +79,37 @@ export const VoiceChat: React.FC<Props> = ({ scrapedContent }) => {
     client.updateSession({ voice: 'alloy' });
 
     client.on('error', (event: any) => console.error(event));
+    
+    // Handle conversation updates with JDN integration
     client.on('conversation.updated', async ({ item, delta }: any) => {
       const items = client.conversation.getItems();
+      
+      console.log("Conversation Item:", item);
+      // If this is a transcribed user message
+      if (item.role === 'user' && item.formatted.transcript) {
+        try {
+          // Send transcribed text to JDN server
+          const jdnResponse = await sendMessage({
+            message: item.formatted.transcript,
+            session_id: '123456789'
+          });
+
+          console.log("JDN Server Response:", jdnResponse);
+
+          // Send JDN response back to conversation
+          client.sendUserMessageContent([
+            {
+              type: 'input_text',
+              text: `AI Server Response: ${jdnResponse.response.text} (Emotion: ${jdnResponse.response.emotion})`,
+            },
+          ]);
+        } catch (error) {
+          console.error("Error querying JDN server:", error);
+        }
+      }
+      
       setItems(items);
     });
-
-    setItems(client.conversation.getItems());
 
     return () => {
       client.reset();
