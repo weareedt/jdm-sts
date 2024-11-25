@@ -5,6 +5,7 @@ import { instructions } from '../utils/conversation_config.js';
 import { ConsoleState, UseConversationReturn } from '../types/console';
 import * as THREE from 'three';
 import { sendMessage } from '../utils/api';
+import { transcribeAudioMesolitica, audioBufferToBlob } from '../utils/transcription';
 
 export const useConversation = (apiKey: string, LOCAL_RELAY_SERVER_URL: string): UseConversationReturn => {
   // UI State
@@ -38,7 +39,7 @@ export const useConversation = (apiKey: string, LOCAL_RELAY_SERVER_URL: string):
   const isFirefox = navigator.userAgent.match(/Firefox\/([1]{1}[7-9]{1}|[2-9]{1}[0-9]{1})/);
   const sampleRate = 24000;
 
-  // Audio instances
+  // Keep all existing refs
   const recorder = useRef<WavRecorder | null>(null);
   const streamPlayer = useRef<WavStreamPlayer>(new WavStreamPlayer({ sampleRate: sampleRate }));
   const client = useRef<RealtimeClient>(
@@ -52,7 +53,10 @@ export const useConversation = (apiKey: string, LOCAL_RELAY_SERVER_URL: string):
     )
   );
 
-  // UI refs
+  // Add new ref for Mesolitica audio buffer
+  const mesoliticaAudioBuffer = useRef<Int16Array>(new Int16Array());
+
+  // Keep all existing UI refs
   const uiRefs = {
     contentTop: useRef<HTMLDivElement>(null),
     clientCanvas: useRef<HTMLCanvasElement>(null),
@@ -91,7 +95,6 @@ export const useConversation = (apiKey: string, LOCAL_RELAY_SERVER_URL: string):
       });
     });
 
-    // Handle errors
     currentClient.on('error', (error: any) => console.error('Client error:', error));
 
     // Handle conversation interruption
@@ -189,7 +192,80 @@ export const useConversation = (apiKey: string, LOCAL_RELAY_SERVER_URL: string):
     }
   }, []);
 
-  // Disconnect conversation
+  // Modify startRecording to handle both OpenAI and Mesolitica
+  const startRecording = useCallback(async () => {
+    setState(prev => ({ ...prev, isRecording: true }));
+    
+    const currentClient = client.current;
+    const currentRecorder = recorder.current;
+    const currentStreamPlayer = streamPlayer.current;
+
+    if (!currentClient || !currentRecorder || !currentStreamPlayer) return;
+
+    const trackSampleOffset = await currentStreamPlayer.interrupt();
+    if (trackSampleOffset?.trackId) {
+      const { trackId, offset } = trackSampleOffset;
+      await currentClient.cancelResponse(trackId, offset);
+    }
+    
+    // Reset Mesolitica buffer
+    mesoliticaAudioBuffer.current = new Int16Array();
+    
+    // Record audio for both OpenAI and Mesolitica
+    await currentRecorder.record((data) => {
+      // Store audio for Mesolitica
+      const newBuffer = new Int16Array(mesoliticaAudioBuffer.current.length + data.mono.length);
+      newBuffer.set(mesoliticaAudioBuffer.current);
+      newBuffer.set(data.mono, mesoliticaAudioBuffer.current.length);
+      mesoliticaAudioBuffer.current = newBuffer;
+
+      // Send to OpenAI as before
+      currentClient.appendInputAudio(data.mono);
+    });
+  }, []);
+
+  // Modify stopRecording to handle both OpenAI and Mesolitica
+  const stopRecording = useCallback(async () => {
+    setState(prev => ({ ...prev, isRecording: false }));
+
+    const currentClient = client.current;
+    const currentRecorder = recorder.current;
+
+    if (!currentClient || !currentRecorder) return;
+
+    await currentRecorder.pause();
+
+    try {
+      // Process with Mesolitica first
+      const audioBlob = audioBufferToBlob(mesoliticaAudioBuffer.current);
+      const transcription = await transcribeAudioMesolitica(audioBlob, {
+        model: 'base',
+        language: 'ms'
+      });
+
+      // Send transcribed text from Mesolitica
+      if (transcription) {
+        currentClient.sendUserMessageContent([
+          {
+            type: 'input_text',
+            text: transcription,
+          }
+        ]);
+      } else {
+        // Fallback to OpenAI if Mesolitica fails
+        currentClient.createResponse();
+      }
+    } catch (error) {
+      console.error('Error with Mesolitica transcription:', error);
+      // Fallback to OpenAI
+      currentClient.createResponse();
+    }
+
+    // Clear Mesolitica buffer
+    mesoliticaAudioBuffer.current = new Int16Array();
+  }, []);
+
+  // Keep all other existing functions unchanged
   const disconnectConversation = useCallback(async () => {
     setState(prev => ({
       ...prev,
@@ -365,44 +441,6 @@ export const useConversation = (apiKey: string, LOCAL_RELAY_SERVER_URL: string):
     }
   }, [state.isConnected, state.userMessage]);
 
-  /**
-   * In push-to-talk mode, start recording
-   * .appendInputAudio() for each sample
-   */
-  const startRecording = useCallback(async () => {
-    setState(prev => ({ ...prev, isRecording: true }));
-    
-    const currentClient = client.current;
-    const currentRecorder = recorder.current;
-    const currentStreamPlayer = streamPlayer.current;
-
-    if (!currentClient || !currentRecorder || !currentStreamPlayer) return;
-
-    const trackSampleOffset = await currentStreamPlayer.interrupt();
-    if (trackSampleOffset?.trackId) {
-      const { trackId, offset } = trackSampleOffset;
-      await currentClient.cancelResponse(trackId, offset);
-    }
-    
-    await currentRecorder.record((data) => currentClient.appendInputAudio(data.mono));
-  }, []);
-
-  /**
-   * In push-to-talk mode, stop recording
-   */
-  const stopRecording = useCallback(async () => {
-    setState(prev => ({ ...prev, isRecording: false }));
-
-    const currentClient = client.current;
-    const currentRecorder = recorder.current;
-
-    if (!currentClient || !currentRecorder) return;
-
-    await currentRecorder.pause();
-    currentClient.createResponse();
-  }, []);
-
-  // Handle turn end type change
   const changeTurnEndType = useCallback(async (value: string) => {
     if (!client.current || !recorder.current) return;
     
