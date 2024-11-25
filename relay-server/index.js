@@ -14,7 +14,7 @@ if (!OPENAI_API_KEY) {
   process.exit(1);
 }
 
-const WS_PORT = parseInt(process.env.PORT) || 8081;
+const WS_PORT = parseInt(process.env.WS_PORT) || 8081;
 const HTTP_PORT = 3001;
 
 // Set up WebSocket relay for OpenAI

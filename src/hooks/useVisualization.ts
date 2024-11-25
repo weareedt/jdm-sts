@@ -47,25 +47,6 @@ export const useVisualization = (mountRef: React.RefObject<HTMLDivElement>, anim
     sphere.userData.clickable = true;
     scene.add(sphere);
 
-    // Click handler
-    const onClick = async (event: MouseEvent) => {
-      const canvas = renderer.domElement;
-      const rect = canvas.getBoundingClientRect();
-      const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-      const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-
-      const raycaster = new THREE.Raycaster();
-      const mouse = new THREE.Vector2(x, y);
-      raycaster.setFromCamera(mouse, camera);
-
-      const intersects = raycaster.intersectObjects(scene.children);
-      if (intersects.length > 0 && intersects[0].object.userData.clickable) {
-        await initAudio();
-      }
-    };
-
-    renderer.domElement.addEventListener('click', onClick);
-
     // Audio setup
     const initAudio = async () => {
       try {
@@ -84,6 +65,9 @@ export const useVisualization = (mountRef: React.RefObject<HTMLDivElement>, anim
       }
     };
 
+    // Initialize audio immediately
+    initAudio();
+
     // Geometry update function
     const updateGeometry = (detail: number) => {
       const newGeometry = new THREE.IcosahedronGeometry(2, detail);
@@ -100,31 +84,6 @@ export const useVisualization = (mountRef: React.RefObject<HTMLDivElement>, anim
       shaderMaterial.uniforms.u_color2.value.set(color);
     };
 
-    // Animation styles
-    const animationStyles = {
-      calmAndSmooth: (normalizedAverage: number) => {
-        shaderMaterial.uniforms.u_avgVolume.value = normalizedAverage;
-        shaderMaterial.uniforms.u_amplitude.value = 1.0;
-        shaderMaterial.uniforms.u_explosiveness.value = 0.6;
-        updateColor(140);
-        updateGeometry(5);
-      },
-      moderate: (normalizedAverage: number) => {
-        shaderMaterial.uniforms.u_avgVolume.value = normalizedAverage;
-        shaderMaterial.uniforms.u_amplitude.value = Math.min(1.0 + normalizedAverage * 0.8, 0.5);
-        shaderMaterial.uniforms.u_explosiveness.value = 0.8;
-        updateColor(140);
-        updateGeometry(25);
-      },
-      sharpAndAggressive: (normalizedAverage: number) => {
-        shaderMaterial.uniforms.u_avgVolume.value = normalizedAverage;
-        shaderMaterial.uniforms.u_amplitude.value = Math.min(1.0 + normalizedAverage * 2.0, 2.0);
-        shaderMaterial.uniforms.u_explosiveness.value = 1.2;
-        updateColor(140);
-        updateGeometry(30);
-      }
-    };
-
     // Animation loop
     const animate = () => {
       const animationFrame = requestAnimationFrame(animate);
@@ -136,8 +95,46 @@ export const useVisualization = (mountRef: React.RefObject<HTMLDivElement>, anim
         const average = dataArray.reduce((sum, value) => sum + value, 0) / dataArray.length;
         const normalizedAverage = average / 255;
 
-        // Use moderate animation style by default
-        animationStyles.moderate(normalizedAverage);
+        // Define animation styles
+        const calmAndSmooth = () => {
+          shaderMaterial.uniforms.u_avgVolume.value = normalizedAverage;
+          shaderMaterial.uniforms.u_amplitude.value = 1.0;
+          shaderMaterial.uniforms.u_explosiveness.value = 0.6;
+          updateColor(140); // Green
+          updateGeometry(5); // 5 polygons
+        };
+
+        const moderate = () => {
+          shaderMaterial.uniforms.u_avgVolume.value = normalizedAverage;
+          shaderMaterial.uniforms.u_amplitude.value = Math.min(1.0 + normalizedAverage * 0.8, 0.5);
+          shaderMaterial.uniforms.u_explosiveness.value = 0.8;
+          updateColor(140); // Light Green
+          updateGeometry(25); // 25 polygons
+        };
+
+        const sharpAndAggressive = () => {
+          shaderMaterial.uniforms.u_avgVolume.value = normalizedAverage;
+          shaderMaterial.uniforms.u_amplitude.value = Math.min(1.0 + normalizedAverage * 2.0, 2.0);
+          shaderMaterial.uniforms.u_explosiveness.value = 1.2;
+          updateColor(140); // Dark Green
+          updateGeometry(30); // 30 polygons
+        };
+
+        // Choose animation style based on condition
+        const animationStyle: number = 2; // Default to moderate
+        switch (animationStyle) {
+          case 1:
+            calmAndSmooth();
+            break;
+          case 2:
+            moderate();
+            break;
+          case 3:
+            sharpAndAggressive();
+            break;
+          default:
+            calmAndSmooth();
+        }
       } else {
         shaderMaterial.uniforms.u_avgVolume.value = 0.0;
         shaderMaterial.uniforms.u_amplitude.value = 1.0;
@@ -149,6 +146,25 @@ export const useVisualization = (mountRef: React.RefObject<HTMLDivElement>, anim
     };
 
     const animationFrame = animate();
+
+    // Click handler
+    const onClick = async (event: MouseEvent) => {
+      const canvas = renderer.domElement;
+      const rect = canvas.getBoundingClientRect();
+      const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+      const raycaster = new THREE.Raycaster();
+      const mouse = new THREE.Vector2(x, y);
+      raycaster.setFromCamera(mouse, camera);
+
+      const intersects = raycaster.intersectObjects(scene.children);
+      if (intersects.length > 0 && intersects[0].object.userData.clickable) {
+        await initAudio();
+      }
+    };
+
+    renderer.domElement.addEventListener('click', onClick);
 
     // Resize handler
     const handleResize = () => {

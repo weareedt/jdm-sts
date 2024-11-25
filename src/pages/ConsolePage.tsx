@@ -1,10 +1,11 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import './ConsolePage.scss';
 
 // Hooks
 import { useConversation } from '../hooks/useConversation';
 import { useAudio } from '../hooks/useAudio';
 import { useVisualization } from '../hooks/useVisualization';
+import { WavRecorder, WavStreamPlayer } from '../lib/wavtools/index.js';
 
 // Components
 import { ControlPanel } from '../components/console/ControlPanel';
@@ -15,6 +16,10 @@ import { ActionControls } from '../components/console/ActionControls';
 const LOCAL_RELAY_SERVER_URL = process.env.REACT_APP_LOCAL_RELAY_SERVER_URL || '';
 
 export function ConsolePage() {
+  // Audio refs
+  const recorder = useRef<WavRecorder | null>(null);
+  const streamPlayer = useRef<WavStreamPlayer>(new WavStreamPlayer({ sampleRate: 24000 }));
+
   // API Key Management
   const getApiKey = useCallback(() => {
     if (LOCAL_RELAY_SERVER_URL) return '';
@@ -113,6 +118,8 @@ export function ConsolePage() {
           <Visualization
             mountRef={uiRefs.mount}
             items={state.items}
+            wavRecorder={recorder.current}
+            wavStreamPlayer={streamPlayer.current}
           />
 
           <ChatWindow

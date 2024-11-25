@@ -76,7 +76,7 @@ export const VoiceChat: React.FC<Props> = ({ scrapedContent }) => {
 
     client.updateSession({ instructions: scrapedContent });
     client.updateSession({ input_audio_transcription: { model: 'whisper-1' } });
-    client.updateSession({ voice: 'alloy' });
+    client.updateSession({ voice: 'shimmer' });
 
     client.on('error', (event: any) => console.error(event));
     

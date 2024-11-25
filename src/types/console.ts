@@ -39,9 +39,7 @@ export interface ConsoleState {
   animationColor: string;
   startTime: string;
   eventsScrollHeight: number;
-}
-
-export interface AudioState {
+  // Audio state properties
   audioContext: AudioContext | null;
   sound: THREE.Audio | null;
   analyser: THREE.AudioAnalyser | null;
@@ -100,16 +98,18 @@ export interface UseConversationReturn {
   uiRefs: UIRefs;
   connectConversation: () => Promise<void>;
   disconnectConversation: () => Promise<void>;
+  deleteConversationItem: (id: string) => Promise<void>;
+  toggleContentTopDisplay: () => void;
+  toggleMinimize: () => void;
+  toggleColorControl: () => void;
+  handleColorChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleSphereClick: () => Promise<void>;
+  initializeAudio: () => void;
+  handleStartPause: () => void;
   handleSendMessage: () => void;
   startRecording: () => Promise<void>;
   stopRecording: () => Promise<void>;
   changeTurnEndType: (value: string) => Promise<void>;
-}
-
-export interface UseAudioReturn {
-  audioState: AudioState;
-  initializeAudio: () => Promise<void>;
-  handleStartPause: () => void;
 }
 
 export interface UseVisualizationReturn {
