@@ -41,9 +41,9 @@ export const useConversation = (apiKey: string, LOCAL_RELAY_SERVER_URL: string):
       LOCAL_RELAY_SERVER_URL
         ? { url: LOCAL_RELAY_SERVER_URL }
         : {
-            apiKey: apiKey,
-            dangerouslyAllowAPIKeyInBrowser: true,
-          }
+          apiKey: apiKey,
+          dangerouslyAllowAPIKeyInBrowser: true,
+        }
     )
   );
 
@@ -77,9 +77,9 @@ export const useConversation = (apiKey: string, LOCAL_RELAY_SERVER_URL: string):
     if (!currentClient) return;
 
     // Set instructions and transcription
-    currentClient.updateSession({ 
+    currentClient.updateSession({
       instructions,
-      input_audio_transcription: { 
+      input_audio_transcription: {
         model: 'whisper-1'
       }
     });
@@ -124,11 +124,11 @@ export const useConversation = (apiKey: string, LOCAL_RELAY_SERVER_URL: string):
     currentClient.on('conversation.updated', async ({ item, delta }: any) => {
       if (!streamPlayer.current) return;
       const items = currentClient.conversation.getItems();
-      
+
       if (delta?.audio) {
         streamPlayer.current.add16BitPCM(delta.audio, item.id);
       }
-      
+
       if (item.status === 'completed' && item.formatted.audio?.length) {
         const wavFile = await WavRecorder.decode(
           item.formatted.audio,
@@ -137,7 +137,7 @@ export const useConversation = (apiKey: string, LOCAL_RELAY_SERVER_URL: string):
         );
         item.formatted.file = wavFile;
       }
-      
+
       setState(prev => ({ ...prev, items }));
     });
 
@@ -242,7 +242,7 @@ export const useConversation = (apiKey: string, LOCAL_RELAY_SERVER_URL: string):
       console.warn("Client is not connected. Message not sent.");
       return;
     }
-  
+
     if (state.userMessage.trim() === '') return;
 
     try {
@@ -260,8 +260,12 @@ export const useConversation = (apiKey: string, LOCAL_RELAY_SERVER_URL: string):
           type: 'input_text',
           text: state.userMessage,
         },
+        {
+          type: 'input_text',
+          text: `AI Server Response: ${aiResponse.response.text} (Emotion: ${aiResponse.response.emotion})`,
+        },
       ]);
-  
+
       setState(prev => ({ ...prev, userMessage: '' }));
     } catch (error) {
       console.error("Error sending message:", error);
@@ -270,7 +274,7 @@ export const useConversation = (apiKey: string, LOCAL_RELAY_SERVER_URL: string):
         {
           type: 'input_text',
           text: state.userMessage,
-        },
+        }
       ]);
       setState(prev => ({ ...prev, userMessage: '' }));
     }
@@ -281,13 +285,13 @@ export const useConversation = (apiKey: string, LOCAL_RELAY_SERVER_URL: string):
     if (!client.current || !streamPlayer.current || !recorder.current) return;
 
     setState(prev => ({ ...prev, isRecording: true }));
-    
+
     const trackSampleOffset = await streamPlayer.current.interrupt();
     if (trackSampleOffset?.trackId) {
       const { trackId, offset } = trackSampleOffset;
       await client.current.cancelResponse(trackId, offset);
     }
-    
+
     await recorder.current.record(async (data) => {
       try {
         // Convert audio data to File
@@ -329,15 +333,15 @@ export const useConversation = (apiKey: string, LOCAL_RELAY_SERVER_URL: string):
   // Handle turn end type change
   const changeTurnEndType = useCallback(async (value: string) => {
     if (!client.current || !recorder.current) return;
-    
+
     if (value === 'none' && recorder.current.getStatus() === 'recording') {
       await recorder.current.pause();
     }
-    
+
     client.current.updateSession({
       turn_detection: value === 'none' ? null : { type: 'server_vad' },
     });
-    
+
     if (value === 'server_vad' && client.current.isConnected()) {
       await recorder.current.record(async (data) => {
         try {
@@ -368,7 +372,7 @@ export const useConversation = (apiKey: string, LOCAL_RELAY_SERVER_URL: string):
         }
       });
     }
-    
+
     setState(prev => ({ ...prev, canPushToTalk: value === 'none' }));
   }, []);
 
