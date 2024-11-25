@@ -38,6 +38,10 @@
   flex-direction: column;
   overflow: hidden;
   margin: 2px 2px;
+  background-image: url('../assets/Artboard 1.png'); /* Update the path accordingly */
+  background-size: cover; /* Ensures the image covers the entire area */
+  background-position: center; /* Centers the image */
+  background-repeat: no-repeat; /* Prevents the image from repeating */
   & > div {
     flex-shrink: 0;
   }
