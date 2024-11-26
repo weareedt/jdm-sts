@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, useEffect } from 'react';
+import { useCallback, useRef, useState, useEffect, MutableRefObject } from 'react';
 import { RealtimeClient } from '@openai/realtime-api-beta';
 import { WavRecorder, WavStreamPlayer } from '../lib/wavtools/index.js';
 import { instructions } from '../utils/conversation_config.js';
@@ -7,7 +7,11 @@ import * as THREE from 'three';
 import { sendMessage } from '../utils/api';
 import { transcribeAudioMesolitica, audioBufferToBlob } from '../utils/transcription';
 
-export const useConversation = (apiKey: string, LOCAL_RELAY_SERVER_URL: string): UseConversationReturn => {
+export const useConversation = (apiKey: string, 
+  LOCAL_RELAY_SERVER_URL: string,
+  recorderRef: MutableRefObject<WavRecorder | null>,
+  streamPlayerRef: MutableRefObject<WavStreamPlayer>
+): UseConversationReturn => {
   // UI State
   const [state, setState] = useState<ConsoleState>({
     userMessage: '',
@@ -44,7 +48,7 @@ export const useConversation = (apiKey: string, LOCAL_RELAY_SERVER_URL: string):
   const streamPlayer = useRef<WavStreamPlayer>(new WavStreamPlayer({ sampleRate: sampleRate }));
   const client = useRef<RealtimeClient>(
     new RealtimeClient(
-      LOCAL_RELAY_SERVER_URL
+  LOCAL_RELAY_SERVER_URL
         ? { url: LOCAL_RELAY_SERVER_URL }
         : {
             apiKey: apiKey,
@@ -250,7 +254,7 @@ export const useConversation = (apiKey: string, LOCAL_RELAY_SERVER_URL: string):
         currentClient.sendUserMessageContent([
           {
             type: 'input_text',
-            text: transcription,
+            text: transcription.toString(),
           }
         ]);
       } else {
@@ -444,6 +448,7 @@ export const useConversation = (apiKey: string, LOCAL_RELAY_SERVER_URL: string):
   }, [state.isConnected, state.userMessage]);
 
   const changeTurnEndType = useCallback(async (value: string) => {
+    console.log('[DEBUG] Changing turn end type to:', value);
     if (!client.current || !recorder.current) return;
     
     if (value === 'none' && recorder.current.getStatus() === 'recording') {
@@ -455,7 +460,99 @@ export const useConversation = (apiKey: string, LOCAL_RELAY_SERVER_URL: string):
     });
     
     if (value === 'server_vad' && client.current.isConnected()) {
-      await recorder.current.record((data) => client.current.appendInputAudio(data.mono));
+      console.log('[DEBUG] Setting up VAD recording');
+      
+      let isProcessing = false;
+      let consecutiveSilentFrames = 0;
+      let lastAmplitude = 0;
+      let isSpeaking = false;
+
+      try {
+        // Record audio and handle voice detection
+        await recorder.current.record((data) => {
+          // Get frequencies for voice detection
+          const frequencies = recorder.current?.getFrequencies('voice');
+          if (frequencies) {
+            // Check if voice has stopped by looking at the average amplitude
+            const avgAmplitude = frequencies.values.reduce((sum, val) => sum + val, 0) / frequencies.values.length;
+            console.log('[DEBUG] Average amplitude:', avgAmplitude);
+
+            // Detect if speaking started
+            if (avgAmplitude > 0.1) {
+              isSpeaking = true;
+              consecutiveSilentFrames = 0;
+              
+              // Send audio data to OpenAI while speaking
+              client.current?.appendInputAudio(data.mono);
+            }
+
+            // Only process if we've detected speech
+            if (isSpeaking) {
+              // Count consecutive silent frames
+              if (avgAmplitude < 0.1) {
+                consecutiveSilentFrames++;
+                console.log('[DEBUG] Silent frames:', consecutiveSilentFrames);
+              } else {
+                consecutiveSilentFrames = 0;
+              }
+
+              // If voice stops (2 consecutive silent frames) and not already processing
+              if (consecutiveSilentFrames >= 2 && !isProcessing) {
+                console.log('[DEBUG] Voice stopped, processing audio');
+                isProcessing = true;
+                
+                // Process the current audio frame directly
+                const audioBlob = audioBufferToBlob(data.mono);
+                console.log('[DEBUG] Processing audio frame');
+
+                // Transcribe with Mesolitica
+                transcribeAudioMesolitica(audioBlob, {
+                  model: 'base',
+                  language: 'ms'
+                }).then(transcription => {
+                  console.log('[DEBUG] Mesolitica transcription:', transcription);
+
+                  if (transcription) {
+                    // Send transcribed text to JDN
+                    sendMessage({
+                      message: transcription.toString(),
+                      session_id: Date.now().toString()
+                    }).then(jdnResponse => {
+                      console.log('[DEBUG] JDN response:', jdnResponse);
+
+                      // Send JDN's response to OpenAI for TTS
+                      client.current?.sendUserMessageContent([
+                        {
+                          type: 'input_text',
+                          text: jdnResponse.response.text
+                        }
+                      ]);
+
+                      // Reset flags after successful processing
+                      isProcessing = false;
+                      consecutiveSilentFrames = 0;
+                      isSpeaking = false;
+                      console.log('[DEBUG] Processing complete');
+                    }).catch(error => {
+                      console.error('[ERROR] JDN request failed:', error);
+                      isProcessing = false;
+                    });
+                  } else {
+                    console.log('[DEBUG] No transcription received');
+                    isProcessing = false;
+                  }
+                }).catch(error => {
+                  console.error('[ERROR] Mesolitica transcription failed:', error);
+                  isProcessing = false;
+                });
+              }
+            }
+            lastAmplitude = avgAmplitude;
+          }
+        });
+      } catch (error) {
+        console.error('[ERROR] Failed to setup VAD recording:', error);
+      }
     }
     
     setState(prev => ({ ...prev, canPushToTalk: value === 'none' }));
