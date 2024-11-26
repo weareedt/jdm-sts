@@ -25,8 +25,6 @@ export const Visualization: React.FC<VisualizationProps> = ({
           height: '100%',
         }}
       >
-        {/* Three.js visualization container */}
-        <div className="threejs-container" style={{ width: '100%', height: 'calc(100% - 120px)' }} />
 
         {/* Canvas-based audio visualization */}
         {wavRecorder && wavStreamPlayer && (

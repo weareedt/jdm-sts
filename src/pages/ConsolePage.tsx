@@ -127,10 +127,8 @@ export function ConsolePage() {
           />
 
           <ChatInput
-            isMinimized={state.isMinimized}
             items={state.items}
             userMessage={state.userMessage}
-            onMinimizeToggle={handleMinimizeToggle}
             onMessageChange={handleMessageChange}
             onMessageSend={handleSendMessage}
             onDeleteItem={handleDeleteItem}
