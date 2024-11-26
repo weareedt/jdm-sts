@@ -168,26 +168,26 @@ export const useConversation = (apiKey: string,
       ]);
 
       // Send a POST request to webhook URL
-      await fetch('https://hooks.spline.design/0AmP-aHvvxs', {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `qZz4w4WlZgUqvmN8LvuFHtCdYRuxM8pUrPFuI_Woetk`,
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-          "WebhookTest": "Hello, successsssla"
-        })
-      }).then(response => {
-        if (!response.ok) {
-          console.error("Webhook request failed:", response.statusText);
-        } else {
-          console.log("Webhook request successful!");
-        }
-      }).catch(error => {
-        console.error("Error sending webhook request:", error);
-      });
+      // await fetch('https://hooks.spline.design/0AmP-aHvvxs', {
+      //   method: 'POST',
+      //   mode: 'no-cors',
+      //   headers: {
+      //     'Content-Type': 'application/json',
+      //     'Authorization': `qZz4w4WlZgUqvmN8LvuFHtCdYRuxM8pUrPFuI_Woetk`,
+      //     'Accept': 'application/json'
+      //   },
+      //   body: JSON.stringify({
+      //     "WebhookTest": "Hello, successsssla"
+      //   })
+      // }).then(response => {
+      //   if (!response.ok) {
+      //     console.error("Webhook request failed:", response.statusText);
+      //   } else {
+      //     console.log("Webhook request successful!");
+      //   }
+      // }).catch(error => {
+      //   console.error("Error sending webhook request:", error);
+      // });
 
       if (client.current.getTurnDetectionType() === 'server_vad') {
         await newRecorder.record((data) => client.current.appendInputAudio(data.mono));
