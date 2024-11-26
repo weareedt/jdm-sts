@@ -11,10 +11,10 @@ import { WavRecorder, WavStreamPlayer } from '../lib/wavtools/index.js';
 // Components
 import { ControlPanel } from '../components/console/ControlPanel';
 import { Visualization } from '../components/console/Visualization';
-import { ChatWindow } from '../components/console/ChatWindow';
+//import { ChatWindow } from '../components/console/ChatWindow';
 import { ActionControls } from '../components/console/ActionControls';
 import { WebcamComponent } from '../components/console/Webcam';
-
+import { ChatInput } from '../components/console/ChatWindow';
 const LOCAL_RELAY_SERVER_URL = process.env.REACT_APP_LOCAL_RELAY_SERVER_URL || '';
 
 export function ConsolePage() {
@@ -126,7 +126,7 @@ export function ConsolePage() {
             wavStreamPlayer={streamPlayer.current}
           />
 
-          <ChatWindow
+          <ChatInput
             isMinimized={state.isMinimized}
             items={state.items}
             userMessage={state.userMessage}
