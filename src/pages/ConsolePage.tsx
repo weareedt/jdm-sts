@@ -17,7 +17,7 @@ const LOCAL_RELAY_SERVER_URL = process.env.REACT_APP_LOCAL_RELAY_SERVER_URL || '
 
 export function ConsolePage() {
   // Audio refs
-  const recorder = useRef<WavRecorder | null>(null);
+  const recorder = useRef<WavRecorder | null>(new WavRecorder({ sampleRate: 24000 }));
   const streamPlayer = useRef<WavStreamPlayer>(new WavStreamPlayer({ sampleRate: 24000 }));
 
   // API Key Management
@@ -49,7 +49,7 @@ export function ConsolePage() {
     startRecording,
     stopRecording,
     changeTurnEndType
-  } = useConversation(apiKey, LOCAL_RELAY_SERVER_URL);
+  } = useConversation(apiKey, LOCAL_RELAY_SERVER_URL, recorder, streamPlayer);
 
   const { initializeAudio, handleStartPause } = useAudio();
   const { shaderMaterialRef } = useVisualization(uiRefs.mount, state.animationColor);
