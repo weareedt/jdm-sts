@@ -44,7 +44,7 @@ export const useConversation = (apiKey: string,
   const sampleRate = 24000;
 
   // Keep all existing refs
-  const recorder = useRef<WavRecorder | null>(null);
+  const recorder = useRef<WavRecorder>(new WavRecorder({ sampleRate: sampleRate }));
   const streamPlayer = useRef<WavStreamPlayer>(new WavStreamPlayer({ sampleRate: sampleRate }));
   const client = useRef<RealtimeClient>(
     new RealtimeClient(
@@ -469,7 +469,7 @@ export const useConversation = (apiKey: string,
 
       try {
         // Record audio and handle voice detection
-        await recorder.current.record((data) => {
+        await recorder.current.record(async (data) => {
           // Get frequencies for voice detection
           const frequencies = recorder.current?.getFrequencies('voice');
           if (frequencies) {
@@ -501,50 +501,59 @@ export const useConversation = (apiKey: string,
                 console.log('[DEBUG] Voice stopped, processing audio');
                 isProcessing = true;
                 
-                // Process the current audio frame directly
-                const audioBlob = audioBufferToBlob(data.mono);
-                console.log('[DEBUG] Processing audio frame');
+                try {
+                  // Save the current recording as WAV
+                  const wavResult = await recorder.current.save(true);
+                  console.log('[DEBUG] WAV file saved:', wavResult);
 
-                // Transcribe with Mesolitica
-                transcribeAudioMesolitica(audioBlob, {
-                  model: 'base',
-                  language: 'ms'
-                }).then(transcription => {
+                  // Create a download link for the WAV file
+                  const url = URL.createObjectURL(wavResult.blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `recording-${Date.now()}.wav`;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(url);
+
+                  // Transcribe with Mesolitica
+                  const transcription = await transcribeAudioMesolitica(wavResult.blob, {
+                    model: 'base',
+                    language: 'ms'
+                  });
+
                   console.log('[DEBUG] Mesolitica transcription:', transcription);
 
                   if (transcription) {
                     // Send transcribed text to JDN
-                    sendMessage({
+                    const jdnResponse = await sendMessage({
                       message: transcription.toString(),
                       session_id: Date.now().toString()
-                    }).then(jdnResponse => {
-                      console.log('[DEBUG] JDN response:', jdnResponse);
+                    });
 
-                      // Send JDN's response to OpenAI for TTS
+                    console.log('[DEBUG] JDN response:', jdnResponse);
+
+                    // Send JDN's response to OpenAI for TTS
+                    if (jdnResponse && jdnResponse.response) {
                       client.current?.sendUserMessageContent([
                         {
                           type: 'input_text',
-                          text: jdnResponse.response.text
+                          text: jdnResponse.response.text + ' (Emotion: ' + jdnResponse.response.emotion + ')',
                         }
                       ]);
-
-                      // Reset flags after successful processing
-                      isProcessing = false;
-                      consecutiveSilentFrames = 0;
-                      isSpeaking = false;
-                      console.log('[DEBUG] Processing complete');
-                    }).catch(error => {
-                      console.error('[ERROR] JDN request failed:', error);
-                      isProcessing = false;
-                    });
-                  } else {
-                    console.log('[DEBUG] No transcription received');
-                    isProcessing = false;
+                    }
                   }
-                }).catch(error => {
-                  console.error('[ERROR] Mesolitica transcription failed:', error);
+                } catch (error) {
+                  console.error('[ERROR] Processing failed:', error);
+                } finally {
+                  // Reset flags after processing
                   isProcessing = false;
-                });
+                  consecutiveSilentFrames = 0;
+                  isSpeaking = false;
+                  // Clear the recording buffer
+                  await recorder.current?.clear();
+                  console.log('[DEBUG] Processing complete');
+                }
               }
             }
             lastAmplitude = avgAmplitude;
