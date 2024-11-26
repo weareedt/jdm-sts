@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import { sendMessage } from '../utils/api';
 import { transcribeAudioMesolitica, audioBufferToBlob } from '../utils/transcription';
 
-export const useConversation = (apiKey: string, 
+export const useConversation = (apiKey: string,
   LOCAL_RELAY_SERVER_URL: string,
   recorderRef: MutableRefObject<WavRecorder | null>,
   streamPlayerRef: MutableRefObject<WavStreamPlayer>
@@ -48,12 +48,12 @@ export const useConversation = (apiKey: string,
   const streamPlayer = useRef<WavStreamPlayer>(new WavStreamPlayer({ sampleRate: sampleRate }));
   const client = useRef<RealtimeClient>(
     new RealtimeClient(
-  LOCAL_RELAY_SERVER_URL
+      LOCAL_RELAY_SERVER_URL
         ? { url: LOCAL_RELAY_SERVER_URL }
         : {
-            apiKey: apiKey,
-            dangerouslyAllowAPIKeyInBrowser: true,
-          }
+          apiKey: apiKey,
+          dangerouslyAllowAPIKeyInBrowser: true,
+        }
     )
   );
 
@@ -76,7 +76,7 @@ export const useConversation = (apiKey: string,
     if (!currentClient) return;
 
     // Set instructions and transcription
-    currentClient.updateSession({ 
+    currentClient.updateSession({
       instructions,
       input_audio_transcription: { model: 'whisper-1' },
       model: 'large-v3',
@@ -117,11 +117,11 @@ export const useConversation = (apiKey: string,
     currentClient.on('conversation.updated', async ({ item, delta }: any) => {
       if (!streamPlayer.current) return;
       const items = currentClient.conversation.getItems();
-      
+
       if (delta?.audio) {
         streamPlayer.current.add16BitPCM(delta.audio, item.id);
       }
-      
+
       if (item.status === 'completed' && item.formatted.audio?.length) {
         const wavFile = await WavRecorder.decode(
           item.formatted.audio,
@@ -130,7 +130,7 @@ export const useConversation = (apiKey: string,
         );
         item.formatted.file = wavFile;
       }
-      
+
       setState(prev => ({ ...prev, items }));
     });
 
@@ -201,7 +201,7 @@ export const useConversation = (apiKey: string,
   // Modify startRecording to handle both OpenAI and Mesolitica
   const startRecording = useCallback(async () => {
     setState(prev => ({ ...prev, isRecording: true }));
-    
+
     const currentClient = client.current;
     const currentRecorder = recorder.current;
     const currentStreamPlayer = streamPlayer.current;
@@ -213,10 +213,10 @@ export const useConversation = (apiKey: string,
       const { trackId, offset } = trackSampleOffset;
       await currentClient.cancelResponse(trackId, offset);
     }
-    
+
     // Reset Mesolitica buffer
     mesoliticaAudioBuffer.current = new Int16Array();
-    
+
     // Record audio for both OpenAI and Mesolitica
     await currentRecorder.record((data) => {
       // Store audio for Mesolitica
@@ -354,9 +354,9 @@ export const useConversation = (apiKey: string,
         const listener = new THREE.AudioListener();
         const sound = new THREE.Audio(listener);
         const analyser = new THREE.AudioAnalyser(sound, 32);
-        
-        setState(prev => ({ 
-          ...prev, 
+
+        setState(prev => ({
+          ...prev,
           isAudioInitialized: true,
           audioContext: newAudioContext,
           sound,
@@ -409,7 +409,7 @@ export const useConversation = (apiKey: string,
       console.warn("Client is not connected. Message not sent.");
       return;
     }
-  
+
     if (state.userMessage.trim() === '') return;
 
     try {
@@ -432,7 +432,7 @@ export const useConversation = (apiKey: string,
           text: `AI Server Response: ${aiResponse.response.text} (Emotion: ${aiResponse.response.emotion})`,
         },
       ]);
-  
+
       setState(prev => ({ ...prev, userMessage: '' }));
     } catch (error) {
       console.error("Error sending message:", error);
@@ -467,99 +467,112 @@ export const useConversation = (apiKey: string,
       let lastAmplitude = 0;
       let isSpeaking = false;
 
-      try {
-        // Record audio and handle voice detection
-        await recorder.current.record(async (data) => {
-          // Get frequencies for voice detection
-          const frequencies = recorder.current?.getFrequencies('voice');
-          if (frequencies) {
-            // Check if voice has stopped by looking at the average amplitude
-            const avgAmplitude = frequencies.values.reduce((sum, val) => sum + val, 0) / frequencies.values.length;
-            console.log('[DEBUG] Average amplitude:', avgAmplitude);
+      const setupRecording = async () => {
+        try {
+          await recorder.current.end();
+          await recorder.current.begin();
+          // Record audio and handle voice detection
+          await recorder.current?.record(async (data) => {
+            // Get frequencies for voice detection
+            const frequencies = recorder.current?.getFrequencies('voice');
+            if (frequencies) {
+              // Check if voice has stopped by looking at the average amplitude
+              const avgAmplitude = frequencies.values.reduce((sum, val) => sum + val, 0) / frequencies.values.length;
+              console.log('[DEBUG] Average amplitude:', avgAmplitude);
 
-            // Detect if speaking started
-            if (avgAmplitude > 0.1) {
-              isSpeaking = true;
-              consecutiveSilentFrames = 0;
-              
-              // Send audio data to OpenAI while speaking
-              client.current?.appendInputAudio(data.mono);
-            }
-
-            // Only process if we've detected speech
-            if (isSpeaking) {
-              // Count consecutive silent frames
-              if (avgAmplitude < 0.1) {
-                consecutiveSilentFrames++;
-                console.log('[DEBUG] Silent frames:', consecutiveSilentFrames);
-              } else {
+              // Detect if speaking started
+              if (avgAmplitude > 0.1) {
+                isSpeaking = true;
                 consecutiveSilentFrames = 0;
+                
+                // Send audio data to OpenAI while speaking
+                client.current?.appendInputAudio(data.mono);
               }
 
-              // If voice stops (2 consecutive silent frames) and not already processing
-              if (consecutiveSilentFrames >= 2 && !isProcessing) {
-                console.log('[DEBUG] Voice stopped, processing audio');
-                isProcessing = true;
-                
-                try {
-                  // Get WAV blob using save() without downloading
-                  const wavResult = await recorder.current.save(true);
-                  console.log('[DEBUG] WAV blob created:', wavResult);
+              // Only process if we've detected speech
+              if (isSpeaking) {
+                // Count consecutive silent frames
+                if (avgAmplitude < 0.1) {
+                  consecutiveSilentFrames++;
+                  console.log('[DEBUG] Silent frames:', consecutiveSilentFrames);
+                } else {
+                  consecutiveSilentFrames = 0;
+                }
 
-                  // Transcribe with Mesolitica using the WAV blob
-                  const transcription = await transcribeAudioMesolitica(wavResult.blob, {
-                    model: 'base',
-                    language: 'ms'
-                  });
+                // If voice stops (2 consecutive silent frames) and not already processing
+                if (consecutiveSilentFrames >= 2 && !isProcessing) {
+                  console.log('[DEBUG] Voice stopped, processing audio');
+                  isProcessing = true;
+                  
+                  try {
+                    // Get WAV blob using save() without downloading
+                    const wavResult = await recorder.current?.save(true);
+                    console.log('[DEBUG] WAV blob created:', wavResult);
 
-                  console.log('[DEBUG] Mesolitica transcription:', transcription);
-
-                  if (transcription) {
-                    // Send transcribed text to JDN
-                    const jdnResponse = await sendMessage({
-                      message: transcription.toString(),
-                      session_id: Date.now().toString()
+                    // Transcribe with Mesolitica using the WAV blob
+                    const transcription = await transcribeAudioMesolitica(wavResult.blob, {
+                      model: 'base',
+                      language: 'ms'
                     });
 
-                    console.log('[DEBUG] JDN response:', jdnResponse);
+                    console.log('[DEBUG] Mesolitica transcription:', transcription);
 
-                    // Send JDN's response to OpenAI for TTS
-                    if (jdnResponse && jdnResponse.response) {
-                      client.current.sendUserMessageContent([
-                        {
-                          type: 'input_text',
-                          text: transcription.toString(),
-                        },
-                        {
-                          type: 'input_text',
-                          text: `AI Server Response: ${jdnResponse.response.text} (Emotion: ${jdnResponse.response.emotion})`,
-                        },
-                      ]);
+                    if (transcription) {
+                      // Send transcribed text to JDN
+                      const jdnResponse = await sendMessage({
+                        message: transcription.toString(),
+                        session_id: Date.now().toString()
+                      });
+
+                      console.log('[DEBUG] JDN response:', jdnResponse);
+
+                      // Send JDN's response to OpenAI for TTS
+                      if (jdnResponse && jdnResponse.response) {
+                        client.current?.sendUserMessageContent([
+                          {
+                            type: 'input_text',
+                            text: transcription.toString(),
+                          },
+                          {
+                            type: 'input_text',
+                            text: `AI Server Response: ${jdnResponse.response.text} (Emotion: ${jdnResponse.response.emotion})`,
+                          },
+                        ]);
+                      }
                     }
+                  } catch (error) {
+                    console.error('[ERROR] Processing failed:', error);
+                  } finally {
+                    // Reset flags after processing
+                    isProcessing = false;
+                    consecutiveSilentFrames = 0;
+                    isSpeaking = false;
+                    // Clear the recording buffer
+                    recorder.current?.clear();
+                    console.log('[DEBUG] Processing complete');
+                    // Restart recording after processing is complete
+                    await setupRecording();
                   }
-                } catch (error) {
-                  console.error('[ERROR] Processing failed:', error);
-                } finally {
-                  // Reset flags after processing
-                  isProcessing = false;
-                  consecutiveSilentFrames = 0;
-                  isSpeaking = false;
-                  // Clear the recording buffer
-                  await recorder.current?.clear();
-                  console.log('[DEBUG] Processing complete');
                 }
               }
+              lastAmplitude = avgAmplitude;
             }
-            lastAmplitude = avgAmplitude;
-          }
-        });
-      } catch (error) {
-        console.error('[ERROR] Failed to setup VAD recording:', error);
-      }
+          });
+        } catch (error) {
+          console.error('[ERROR] Failed to setup VAD recording:', error);
+          // If setup fails, try to restart recording
+          await setupRecording();
+        }
+      };
+
+      // Initial setup of recording
+      await setupRecording();
     }
     
     setState(prev => ({ ...prev, canPushToTalk: value === 'none' }));
   }, []);
+
+  // ... [Rest of the code remains unchanged]
 
   return {
     state,
