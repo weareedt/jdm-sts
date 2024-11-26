@@ -502,21 +502,11 @@ export const useConversation = (apiKey: string,
                 isProcessing = true;
                 
                 try {
-                  // Save the current recording as WAV
+                  // Get WAV blob using save() without downloading
                   const wavResult = await recorder.current.save(true);
-                  console.log('[DEBUG] WAV file saved:', wavResult);
+                  console.log('[DEBUG] WAV blob created:', wavResult);
 
-                  // Create a download link for the WAV file
-                  const url = URL.createObjectURL(wavResult.blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = `recording-${Date.now()}.wav`;
-                  document.body.appendChild(a);
-                  a.click();
-                  document.body.removeChild(a);
-                  URL.revokeObjectURL(url);
-
-                  // Transcribe with Mesolitica
+                  // Transcribe with Mesolitica using the WAV blob
                   const transcription = await transcribeAudioMesolitica(wavResult.blob, {
                     model: 'base',
                     language: 'ms'
@@ -535,11 +525,15 @@ export const useConversation = (apiKey: string,
 
                     // Send JDN's response to OpenAI for TTS
                     if (jdnResponse && jdnResponse.response) {
-                      client.current?.sendUserMessageContent([
+                      client.current.sendUserMessageContent([
                         {
                           type: 'input_text',
-                          text: jdnResponse.response.text + ' (Emotion: ' + jdnResponse.response.emotion + ')',
-                        }
+                          text: transcription.toString(),
+                        },
+                        {
+                          type: 'input_text',
+                          text: `AI Server Response: ${jdnResponse.response.text} (Emotion: ${jdnResponse.response.emotion})`,
+                        },
                       ]);
                     }
                   }
