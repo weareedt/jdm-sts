@@ -6,6 +6,7 @@ interface ActionControlsProps {
   isConnected: boolean;
   canPushToTalk: boolean;
   isRecording: boolean;
+  isColorControlVisible?: boolean;
   onTurnEndTypeChange: (value: string) => void;
   onStartRecording: () => void;
   onStopRecording: () => void;
@@ -15,6 +16,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
   isConnected,
   canPushToTalk,
   isRecording,
+  isColorControlVisible = true,
   onTurnEndTypeChange,
   onStartRecording,
   onStopRecording
@@ -22,12 +24,14 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
   return (
     <div className="content-actions">
       <div className="toggle-container">
-        <Toggle
-          defaultValue={false}
-          labels={['manual', 'vad']}
-          values={['none', 'server_vad']}
-          onChange={(_, value) => onTurnEndTypeChange(value)}
-        />
+        {isColorControlVisible && (
+          <Toggle
+            defaultValue={false}
+            labels={['manual', 'vad']}
+            values={['none', 'server_vad']}
+            onChange={(_, value) => onTurnEndTypeChange(value)}
+          />
+        )}
       </div>
       <div className="spacer" />
       {isConnected && canPushToTalk && (
