@@ -39,10 +39,10 @@ export const AudioVisualization: React.FC<AudioVisualizationProps> = ({
               clientCanvas,
               clientCtx,
               result.values,
-              '#0099ff',
-              10,
+              '#00000000',
               0,
-              8
+              0,
+              0
             );
           }
         }
@@ -61,10 +61,10 @@ export const AudioVisualization: React.FC<AudioVisualizationProps> = ({
               serverCanvas,
               serverCtx,
               result.values,
-              '#009900',
-              10,
+              '#00000000',
               0,
-              8
+              0,
+              0
             );
           }
         }
