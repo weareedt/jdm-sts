@@ -79,6 +79,7 @@ export const useConversation = (apiKey: string,
     currentClient.updateSession({
       instructions,
       input_audio_transcription: { model: 'whisper-1' },
+      voice: 'shimmer'
     });
 
     // Handle realtime events
