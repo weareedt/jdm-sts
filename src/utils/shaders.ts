@@ -6,7 +6,8 @@ export const vertexShader = `
 
   varying vec2 vUv;
   varying vec3 vNormal;
-  varying vec3 vPosition; // Pass position to fragment shader
+  varying vec3 vPosition;
+  varying float vDisplacement;
 
   // Simplex 3D noise function
   vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
@@ -79,29 +80,46 @@ export const vertexShader = `
     vUv = uv;
     vPosition = position;
 
-    float waveAmplitude = 0.03;
-    float waveFrequency = 2.0;
-    float waveSpeed = 1.0;
+    // Enhanced wisp particle effect
+    float timeScale = u_time * 0.8;
+    vec3 noisePosition = position * 2.0;
+    
+    // Create multiple layers of noise for more complex movement
+    float noise1 = snoise(noisePosition + vec3(timeScale * 0.5));
+    float noise2 = snoise(noisePosition * 2.0 + vec3(timeScale * 0.3));
+    float noise3 = snoise(noisePosition * 4.0 + vec3(timeScale * 0.2));
+    
+    // Combine noise layers with different weights
+    float combinedNoise = (
+      noise1 * 0.5 +
+      noise2 * 0.3 +
+      noise3 * 0.2
+    ) * (0.5 + u_avgVolume);
 
-    float waveX = sin(position.y * waveFrequency + u_time * waveSpeed) * waveAmplitude;
-    float waveY = cos(position.x * waveFrequency + u_time * waveSpeed) * waveAmplitude;
-    float waveZ = sin(position.z * waveFrequency + u_time * waveSpeed) * waveAmplitude;
-    vec3 waveDisplacement = vec3(waveX, waveY, waveZ);
+    // Create spiral movement
+    float angle = timeScale + length(position) * 2.0;
+    vec3 spiral = vec3(
+      sin(angle) * (1.0 + combinedNoise * 0.5),
+      cos(angle) * (1.0 + combinedNoise * 0.5),
+      sin(timeScale * 0.5) * combinedNoise
+    );
 
-    float noise = snoise(position + vec3(u_time * 0.8));
-    vec3 noiseDisplacement = position * noise * (u_explosiveness * 0.8) * (u_avgVolume * 0.8);
+    // Add audio-reactive displacement
+    vec3 displacement = vNormal * (combinedNoise * 0.5 + u_avgVolume * 0.3);
+    displacement += spiral * (0.2 + u_avgVolume * 0.1);
 
-    float audioInfluence = smoothstep(0.0, 0.6, u_avgVolume);
+    // Create particle-like movement
+    float particleOffset = snoise(position + vec3(timeScale)) * u_explosiveness;
+    displacement += vNormal * particleOffset * (0.3 + u_avgVolume * 0.2);
 
-    vec3 finalPosition = position;
-    finalPosition += waveDisplacement * (1.0 - audioInfluence * 0.7);
-    finalPosition += noiseDisplacement * audioInfluence;
+    // Store displacement for fragment shader
+    vDisplacement = combinedNoise + particleOffset;
 
-    // Pulsate effect /*can remove for opt 1*/
-    float pulse = sin(u_time + length(finalPosition) * 5.0) * 0.1 * u_amplitude;
-    finalPosition += normalize(vNormal) * pulse;
-
+    // Apply final position with smooth transitions
+    vec3 finalPosition = position + displacement * (0.8 + u_amplitude * 0.4);
+    
     gl_Position = projectionMatrix * modelViewMatrix * vec4(finalPosition, 1.0);
+    gl_PointSize = (2.0 + u_avgVolume * 3.0) * (1.0 - length(finalPosition) * 0.1);
   }
 `;
 
@@ -116,37 +134,43 @@ export const fragmentShader = `
   varying vec2 vUv;
   varying vec3 vPosition;
   varying vec3 vNormal;
+  varying float vDisplacement;
 
   void main() {
-    // Smooth color transition
-    vec3 color = mix(u_color1, u_color2, 0.5 + 0.5 * sin(u_time + vUv.x * 3.14159));
+    // Define our color palette
+    vec3 blue = vec3(0.0, 0.4, 1.0);
+    vec3 red = vec3(1.0, 0.2, 0.2);
+    vec3 yellow = vec3(1.0, 0.9, 0.2);
+    vec3 white = vec3(1.0, 1.0, 1.0);
 
-    // Apply lighting effect
-    float intensity = dot(normalize(vNormal), vec3(0.0, 0.0, 1.0));
-    color *= (0.5 + 0.5 * intensity);
+    // Create dynamic color transitions
+    float timeFlow = u_time * 0.3;
+    float displacement = vDisplacement * 2.0;
+    
+    // Mix colors based on displacement and time
+    vec3 color1 = mix(blue, red, sin(timeFlow + displacement) * 0.5 + 0.5);
+    vec3 color2 = mix(yellow, white, cos(timeFlow - displacement) * 0.5 + 0.5);
+    vec3 baseColor = mix(color1, color2, sin(timeFlow * 0.5) * 0.5 + 0.5);
 
-    gl_FragColor = vec4(color, 1.0);
+    // Add white highlights for particle effect
+    float highlight = pow(1.0 - length(vPosition) * 0.15, 3.0);
+    baseColor = mix(baseColor, white, highlight * (0.3 + u_avgVolume * 0.2));
+
+    // Create soft particle effect
+    float distanceFromCenter = length(gl_PointCoord - vec2(0.5));
+    float softness = 0.05 + u_avgVolume * 0.02;
+    float alpha = smoothstep(0.5, 0.5 - softness, distanceFromCenter);
+
+    // Add audio-reactive glow
+    float glow = u_avgVolume * 0.5;
+    baseColor += glow * mix(blue, white, 0.5);
+
+    // Add fresnel effect for edge glow
+    vec3 viewDirection = normalize(cameraPosition - vPosition);
+    float fresnel = pow(1.0 - max(dot(viewDirection, vNormal), 0.0), 3.0);
+    baseColor += fresnel * white * 0.3;
+
+    // Final color with transparency
+    gl_FragColor = vec4(baseColor, alpha * (0.6 + glow * 0.4));
   }
 `;
-
-/*void main() {
-  float pulsate = sin(u_time * 2.0) * 0.5 + 0.5;
-  vec3 finalColor = u_staticColor * pulsate;
-
-  vec3 viewDirection = normalize(cameraPosition - vPosition);
-  float rimStrength = 1.0 - max(dot(normalize(vNormal), viewDirection), 0.0);
-
-  float pulse = sin(u_time * 2.0) * 0.5;
-  vec3 glowColor = mix(u_color1, u_color2, pulse);
-
-  float glowStrength = rimStrength * (0.9 + pulse * 0.8);
-  glowStrength += u_avgVolume * 0.15;
-
-  finalColor += glowColor * glowStrength * 2.5;
-
-  float alpha = max(0.8, glowStrength);
-
-  gl_FragColor = vec4(finalColor, alpha);
-}
-`;*/
-

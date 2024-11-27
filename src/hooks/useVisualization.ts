@@ -16,14 +16,48 @@ export const useVisualization = (mountRef: React.RefObject<HTMLDivElement>, anim
     // Scene setup
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    const renderer = new THREE.WebGLRenderer({ 
+      antialias: true, 
+      alpha: true,
+      premultipliedAlpha: true 
+    });
     renderer.setSize(width, height);
     mountRef.current.appendChild(renderer.domElement);
 
     camera.position.z = 14;
 
-    // Geometry and material setup
-    const geometry = new THREE.IcosahedronGeometry(2, 10);
+    // Create particles
+    const particleCount = 5000;
+    const positions = new Float32Array(particleCount * 3);
+    const normals = new Float32Array(particleCount * 3);
+
+    // Create particle positions in a spherical formation
+    for (let i = 0; i < particleCount; i++) {
+      const i3 = i * 3;
+      const radius = 2;
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos((Math.random() * 2) - 1);
+      
+      positions[i3] = radius * Math.sin(phi) * Math.cos(theta);
+      positions[i3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
+      positions[i3 + 2] = radius * Math.cos(phi);
+
+      // Calculate normals (direction from center)
+      const length = Math.sqrt(
+        positions[i3] ** 2 + 
+        positions[i3 + 1] ** 2 + 
+        positions[i3 + 2] ** 2
+      );
+      normals[i3] = positions[i3] / length;
+      normals[i3 + 1] = positions[i3 + 1] / length;
+      normals[i3 + 2] = positions[i3 + 2] / length;
+    }
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
+
+    // Updated material settings for particle effect
     const shaderMaterial = new THREE.ShaderMaterial({
       vertexShader,
       fragmentShader,
@@ -32,20 +66,21 @@ export const useVisualization = (mountRef: React.RefObject<HTMLDivElement>, anim
         u_amplitude: { value: 0.0 },
         u_explosiveness: { value: 0.0 },
         u_avgVolume: { value: 0.0 },
-        u_color1: { value: new THREE.Color(animationColor) },
-        u_color2: { value: new THREE.Color(animationColor) },
+        u_color1: { value: new THREE.Color('#0066ff') }, // Blue
+        u_color2: { value: new THREE.Color('#ff3333') }, // Red
       },
-      wireframe: true,
-      side: THREE.DoubleSide,
-      blending: THREE.AdditiveBlending
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      vertexColors: true
     });
 
     shaderMaterialRef.current = shaderMaterial;
 
-    // Create sphere mesh
-    const sphere = new THREE.Mesh(geometry, shaderMaterial);
-    sphere.userData.clickable = true;
-    scene.add(sphere);
+    // Create points system instead of mesh
+    const particles = new THREE.Points(geometry, shaderMaterial);
+    particles.userData.clickable = true;
+    scene.add(particles);
 
     // Audio setup
     const initAudio = async () => {
@@ -68,26 +103,14 @@ export const useVisualization = (mountRef: React.RefObject<HTMLDivElement>, anim
     // Initialize audio immediately
     initAudio();
 
-    // Geometry update function
-    const updateGeometry = (detail: number) => {
-      const newGeometry = new THREE.IcosahedronGeometry(2, detail);
-      sphere.geometry.dispose();
-      sphere.geometry = newGeometry;
-    };
-
-    // Color update function
-    const updateColor = (baseHue: number) => {
-      const hueVariation = (Math.sin(shaderMaterial.uniforms.u_time.value) + 1) * 15;
-      const hue = (baseHue + hueVariation) % 360;
-      const color = new THREE.Color(`hsl(${hue}, 100%, 50%)`);
-      shaderMaterial.uniforms.u_color1.value.set(color);
-      shaderMaterial.uniforms.u_color2.value.set(color);
-    };
-
     // Animation loop
     const animate = () => {
       const animationFrame = requestAnimationFrame(animate);
       shaderMaterial.uniforms.u_time.value += 0.01;
+
+      // Rotate the particle system
+      particles.rotation.y += 0.001;
+      particles.rotation.x += 0.0005;
 
       if (analyser) {
         const dataArray = new Uint8Array(analyser.frequencyBinCount);
@@ -95,49 +118,36 @@ export const useVisualization = (mountRef: React.RefObject<HTMLDivElement>, anim
         const average = dataArray.reduce((sum, value) => sum + value, 0) / dataArray.length;
         const normalizedAverage = average / 255;
 
-        // Define animation styles
-        const calmAndSmooth = () => {
+        // Define particle animation states
+        const gentleFlow = () => {
+          shaderMaterial.uniforms.u_avgVolume.value = normalizedAverage * 0.8;
+          shaderMaterial.uniforms.u_amplitude.value = 0.4;
+          shaderMaterial.uniforms.u_explosiveness.value = 0.2;
+        };
+
+        const moderateFlow = () => {
           shaderMaterial.uniforms.u_avgVolume.value = normalizedAverage;
-          shaderMaterial.uniforms.u_amplitude.value = 1.0;
+          shaderMaterial.uniforms.u_amplitude.value = 0.6;
+          shaderMaterial.uniforms.u_explosiveness.value = 0.4;
+        };
+
+        const intenseFlow = () => {
+          shaderMaterial.uniforms.u_avgVolume.value = normalizedAverage * 1.2;
+          shaderMaterial.uniforms.u_amplitude.value = 0.8;
           shaderMaterial.uniforms.u_explosiveness.value = 0.6;
-          updateColor(140); // Green
-          updateGeometry(5); // 5 polygons
         };
 
-        const moderate = () => {
-          shaderMaterial.uniforms.u_avgVolume.value = normalizedAverage;
-          shaderMaterial.uniforms.u_amplitude.value = Math.min(1.0 + normalizedAverage * 0.8, 0.5);
-          shaderMaterial.uniforms.u_explosiveness.value = 0.8;
-          updateColor(140); // Light Green
-          updateGeometry(25); // 25 polygons
-        };
-
-        const sharpAndAggressive = () => {
-          shaderMaterial.uniforms.u_avgVolume.value = normalizedAverage;
-          shaderMaterial.uniforms.u_amplitude.value = Math.min(1.0 + normalizedAverage * 2.0, 2.0);
-          shaderMaterial.uniforms.u_explosiveness.value = 1.2;
-          updateColor(140); // Dark Green
-          updateGeometry(30); // 30 polygons
-        };
-
-        // Choose animation style based on condition
-        const animationStyle: number = 2; // Default to moderate
-        switch (animationStyle) {
-          case 1:
-            calmAndSmooth();
-            break;
-          case 2:
-            moderate();
-            break;
-          case 3:
-            sharpAndAggressive();
-            break;
-          default:
-            calmAndSmooth();
+        // Choose animation state based on audio intensity
+        if (normalizedAverage < 0.3) {
+          gentleFlow();
+        } else if (normalizedAverage < 0.6) {
+          moderateFlow();
+        } else {
+          intenseFlow();
         }
       } else {
         shaderMaterial.uniforms.u_avgVolume.value = 0.0;
-        shaderMaterial.uniforms.u_amplitude.value = 1.0;
+        shaderMaterial.uniforms.u_amplitude.value = 0.4;
         shaderMaterial.uniforms.u_explosiveness.value = 0.2;
       }
 
