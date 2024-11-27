@@ -1,7 +1,7 @@
 {
   "files": {
     "main.css": "/jdn-sts/static/css/main.9ab89ee4.css",
-    "main.js": "/jdn-sts/static/js/main.f97ed2bc.js",
+    "main.js": "/jdn-sts/static/js/main.8cb35aa9.js",
     "static/media/JDN AI Backgorund (Vertical).png": "/jdn-sts/static/media/JDN AI Backgorund (Vertical).39fd1898ac085540455d.png",
     "static/media/JDN AI Backgorund (Horizontal).png": "/jdn-sts/static/media/JDN AI Backgorund (Horizontal).a74a68e4a2ba4a413cef.png",
     "static/media/SF-Pro-Text-Bold.otf": "/jdn-sts/static/media/SF-Pro-Text-Bold.9ef3e7915275d9c15bbb.otf",
@@ -10,10 +10,10 @@
     "static/media/SF-Pro-Display-Regular.otf": "/jdn-sts/static/media/SF-Pro-Display-Regular.d1f5e6e16dd4f75c3950.otf",
     "index.html": "/jdn-sts/index.html",
     "main.9ab89ee4.css.map": "/jdn-sts/static/css/main.9ab89ee4.css.map",
-    "main.f97ed2bc.js.map": "/jdn-sts/static/js/main.f97ed2bc.js.map"
+    "main.8cb35aa9.js.map": "/jdn-sts/static/js/main.8cb35aa9.js.map"
   },
   "entrypoints": [
     "static/css/main.9ab89ee4.css",
-    "static/js/main.f97ed2bc.js"
+    "static/js/main.8cb35aa9.js"
   ]
 }
