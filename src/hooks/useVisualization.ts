@@ -16,14 +16,74 @@ export const useVisualization = (mountRef: React.RefObject<HTMLDivElement>, anim
     // Scene setup
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    const renderer = new THREE.WebGLRenderer({ 
+      antialias: true, 
+      alpha: true,
+      premultipliedAlpha: true 
+    });
     renderer.setSize(width, height);
     mountRef.current.appendChild(renderer.domElement);
 
-    camera.position.z = 14;
+    // Adjust camera position for better wisp visibility
+    camera.position.z = 12;
 
-    // Geometry and material setup
-    const geometry = new THREE.IcosahedronGeometry(2, 10);
+    // Create particles with density gradient optimized for wisp effect
+    const particleCount = 12000; // Increased for more detailed wisp effect
+    const positions = new Float32Array(particleCount * 3);
+    const normals = new Float32Array(particleCount * 3);
+
+    // Helper function to create point with wisp-like distribution
+    const createPoint = (index: number) => {
+      const i3 = index * 3;
+      
+      // Use custom distribution for wisp shape
+      const radius = Math.pow(Math.random(), 0.7) * 4; // Adjusted for wider spread
+      const theta = Math.random() * Math.PI * 2;
+      
+      // Modified phi distribution for wing-like shape
+      let phi: number;
+      if (Math.random() < 0.6) {
+        // Core and wing particles
+        phi = (Math.random() * 0.8 + 0.1) * Math.PI;
+      } else {
+        // Scattered particles for ethereal effect
+        phi = Math.acos((Math.random() * 2) - 1);
+      }
+      
+      // Calculate position with slight vertical stretch
+      positions[i3] = radius * Math.sin(phi) * Math.cos(theta);
+      positions[i3 + 1] = radius * Math.sin(phi) * Math.sin(theta) * 1.2; // Vertical stretch
+      positions[i3 + 2] = radius * Math.cos(phi) * 0.8; // Flatten slightly
+
+      // Calculate normal (direction from center)
+      const length = Math.sqrt(
+        positions[i3] ** 2 + 
+        positions[i3 + 1] ** 2 + 
+        positions[i3 + 2] ** 2
+      );
+      
+      // Avoid division by zero
+      if (length > 0) {
+        normals[i3] = positions[i3] / length;
+        normals[i3 + 1] = positions[i3 + 1] / length;
+        normals[i3 + 2] = positions[i3 + 2] / length;
+      } else {
+        normals[i3] = 0;
+        normals[i3 + 1] = 0;
+        normals[i3 + 2] = 1;
+      }
+    };
+
+    // Generate particles
+    for (let i = 0; i < particleCount; i++) {
+      createPoint(i);
+    }
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
+
+    // Updated material settings for wisp effect
     const shaderMaterial = new THREE.ShaderMaterial({
       vertexShader,
       fragmentShader,
@@ -32,20 +92,21 @@ export const useVisualization = (mountRef: React.RefObject<HTMLDivElement>, anim
         u_amplitude: { value: 0.0 },
         u_explosiveness: { value: 0.0 },
         u_avgVolume: { value: 0.0 },
-        u_color1: { value: new THREE.Color(animationColor) },
-        u_color2: { value: new THREE.Color(animationColor) },
+        u_color1: { value: new THREE.Color('#4287f5') }, // Ethereal blue
+        u_color2: { value: new THREE.Color('#ff6b3d') }, // Warm orange
       },
-      wireframe: true,
-      side: THREE.DoubleSide,
-      blending: THREE.AdditiveBlending
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      vertexColors: true
     });
 
     shaderMaterialRef.current = shaderMaterial;
 
-    // Create sphere mesh
-    const sphere = new THREE.Mesh(geometry, shaderMaterial);
-    sphere.userData.clickable = true;
-    scene.add(sphere);
+    // Create points system
+    const particles = new THREE.Points(geometry, shaderMaterial);
+    particles.userData.clickable = true;
+    scene.add(particles);
 
     // Audio setup
     const initAudio = async () => {
@@ -68,26 +129,14 @@ export const useVisualization = (mountRef: React.RefObject<HTMLDivElement>, anim
     // Initialize audio immediately
     initAudio();
 
-    // Geometry update function
-    const updateGeometry = (detail: number) => {
-      const newGeometry = new THREE.IcosahedronGeometry(2, detail);
-      sphere.geometry.dispose();
-      sphere.geometry = newGeometry;
-    };
-
-    // Color update function
-    const updateColor = (baseHue: number) => {
-      const hueVariation = (Math.sin(shaderMaterial.uniforms.u_time.value) + 1) * 15;
-      const hue = (baseHue + hueVariation) % 360;
-      const color = new THREE.Color(`hsl(${hue}, 100%, 50%)`);
-      shaderMaterial.uniforms.u_color1.value.set(color);
-      shaderMaterial.uniforms.u_color2.value.set(color);
-    };
-
-    // Animation loop
+    // Animation loop with wisp behavior
     const animate = () => {
       const animationFrame = requestAnimationFrame(animate);
-      shaderMaterial.uniforms.u_time.value += 0.01;
+      shaderMaterial.uniforms.u_time.value += 0.008; // Slowed down for more ethereal movement
+
+      // Gentle rotation for flowing effect
+      particles.rotation.y += 0.0003;
+      particles.rotation.x = Math.sin(shaderMaterial.uniforms.u_time.value * 0.2) * 0.1;
 
       if (analyser) {
         const dataArray = new Uint8Array(analyser.frequencyBinCount);
@@ -95,50 +144,38 @@ export const useVisualization = (mountRef: React.RefObject<HTMLDivElement>, anim
         const average = dataArray.reduce((sum, value) => sum + value, 0) / dataArray.length;
         const normalizedAverage = average / 255;
 
-        // Define animation styles
-        const calmAndSmooth = () => {
-          shaderMaterial.uniforms.u_avgVolume.value = normalizedAverage;
-          shaderMaterial.uniforms.u_amplitude.value = 1.0;
-          shaderMaterial.uniforms.u_explosiveness.value = 0.6;
-          updateColor(140); // Green
-          updateGeometry(5); // 5 polygons
+        // Define wisp animation states
+        const gentleWisp = () => {
+          shaderMaterial.uniforms.u_avgVolume.value = normalizedAverage * 0.6;
+          shaderMaterial.uniforms.u_amplitude.value = 0.2;
+          shaderMaterial.uniforms.u_explosiveness.value = 0.15;
         };
 
-        const moderate = () => {
-          shaderMaterial.uniforms.u_avgVolume.value = normalizedAverage;
-          shaderMaterial.uniforms.u_amplitude.value = Math.min(1.0 + normalizedAverage * 0.8, 0.5);
-          shaderMaterial.uniforms.u_explosiveness.value = 0.8;
-          updateColor(140); // Light Green
-          updateGeometry(25); // 25 polygons
+        const activeWisp = () => {
+          shaderMaterial.uniforms.u_avgVolume.value = normalizedAverage * 0.8;
+          shaderMaterial.uniforms.u_amplitude.value = 0.4;
+          shaderMaterial.uniforms.u_explosiveness.value = 0.3;
         };
 
-        const sharpAndAggressive = () => {
+        const energeticWisp = () => {
           shaderMaterial.uniforms.u_avgVolume.value = normalizedAverage;
-          shaderMaterial.uniforms.u_amplitude.value = Math.min(1.0 + normalizedAverage * 2.0, 2.0);
-          shaderMaterial.uniforms.u_explosiveness.value = 1.2;
-          updateColor(140); // Dark Green
-          updateGeometry(30); // 30 polygons
+          shaderMaterial.uniforms.u_amplitude.value = 0.6;
+          shaderMaterial.uniforms.u_explosiveness.value = 0.45;
         };
 
-        // Choose animation style based on condition
-        const animationStyle: number = 2; // Default to moderate
-        switch (animationStyle) {
-          case 1:
-            calmAndSmooth();
-            break;
-          case 2:
-            moderate();
-            break;
-          case 3:
-            sharpAndAggressive();
-            break;
-          default:
-            calmAndSmooth();
+        // Choose animation state based on audio intensity
+        if (normalizedAverage < 0.3) {
+          gentleWisp();
+        } else if (normalizedAverage < 0.6) {
+          activeWisp();
+        } else {
+          energeticWisp();
         }
       } else {
-        shaderMaterial.uniforms.u_avgVolume.value = 0.0;
-        shaderMaterial.uniforms.u_amplitude.value = 1.0;
-        shaderMaterial.uniforms.u_explosiveness.value = 0.2;
+        // Default gentle movement when no audio
+        shaderMaterial.uniforms.u_avgVolume.value = 0.1;
+        shaderMaterial.uniforms.u_amplitude.value = 0.2;
+        shaderMaterial.uniforms.u_explosiveness.value = 0.15;
       }
 
       renderer.render(scene, camera);
