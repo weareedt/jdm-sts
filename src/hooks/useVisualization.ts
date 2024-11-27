@@ -26,38 +26,54 @@ export const useVisualization = (mountRef: React.RefObject<HTMLDivElement>, anim
 
     camera.position.z = 14;
 
-    // Create particles
-    const particleCount = 5000;
+    // Create particles with density gradient
+    const particleCount = 8000; // Increased particle count for better bloom effect
     const positions = new Float32Array(particleCount * 3);
     const normals = new Float32Array(particleCount * 3);
 
-    // Create particle positions in a spherical formation
-    for (let i = 0; i < particleCount; i++) {
-      const i3 = i * 3;
-      const radius = 2;
+    // Helper function to create random point in sphere with density gradient
+    const createPoint = (index: number) => {
+      const i3 = index * 3;
+      
+      // Use inverse square distribution for denser center
+      const radius = Math.pow(Math.random(), 0.5) * 3;
       const theta = Math.random() * Math.PI * 2;
       const phi = Math.acos((Math.random() * 2) - 1);
       
+      // Calculate position
       positions[i3] = radius * Math.sin(phi) * Math.cos(theta);
       positions[i3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
       positions[i3 + 2] = radius * Math.cos(phi);
 
-      // Calculate normals (direction from center)
+      // Calculate normal (direction from center)
       const length = Math.sqrt(
         positions[i3] ** 2 + 
         positions[i3 + 1] ** 2 + 
         positions[i3 + 2] ** 2
       );
-      normals[i3] = positions[i3] / length;
-      normals[i3 + 1] = positions[i3 + 1] / length;
-      normals[i3 + 2] = positions[i3 + 2] / length;
+      
+      // Avoid division by zero
+      if (length > 0) {
+        normals[i3] = positions[i3] / length;
+        normals[i3 + 1] = positions[i3 + 1] / length;
+        normals[i3 + 2] = positions[i3 + 2] / length;
+      } else {
+        normals[i3] = 0;
+        normals[i3 + 1] = 0;
+        normals[i3 + 2] = 1;
+      }
+    };
+
+    // Generate particles
+    for (let i = 0; i < particleCount; i++) {
+      createPoint(i);
     }
 
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
 
-    // Updated material settings for particle effect
+    // Updated material settings for bloom effect
     const shaderMaterial = new THREE.ShaderMaterial({
       vertexShader,
       fragmentShader,
@@ -77,7 +93,7 @@ export const useVisualization = (mountRef: React.RefObject<HTMLDivElement>, anim
 
     shaderMaterialRef.current = shaderMaterial;
 
-    // Create points system instead of mesh
+    // Create points system
     const particles = new THREE.Points(geometry, shaderMaterial);
     particles.userData.clickable = true;
     scene.add(particles);
@@ -108,9 +124,8 @@ export const useVisualization = (mountRef: React.RefObject<HTMLDivElement>, anim
       const animationFrame = requestAnimationFrame(animate);
       shaderMaterial.uniforms.u_time.value += 0.01;
 
-      // Rotate the particle system
-      particles.rotation.y += 0.001;
-      particles.rotation.x += 0.0005;
+      // Subtle rotation for additional movement
+      particles.rotation.y += 0.0005;
 
       if (analyser) {
         const dataArray = new Uint8Array(analyser.frequencyBinCount);
@@ -118,36 +133,36 @@ export const useVisualization = (mountRef: React.RefObject<HTMLDivElement>, anim
         const average = dataArray.reduce((sum, value) => sum + value, 0) / dataArray.length;
         const normalizedAverage = average / 255;
 
-        // Define particle animation states
-        const gentleFlow = () => {
+        // Define bloom animation states
+        const gentleBloom = () => {
           shaderMaterial.uniforms.u_avgVolume.value = normalizedAverage * 0.8;
-          shaderMaterial.uniforms.u_amplitude.value = 0.4;
+          shaderMaterial.uniforms.u_amplitude.value = 0.3;
           shaderMaterial.uniforms.u_explosiveness.value = 0.2;
         };
 
-        const moderateFlow = () => {
+        const moderateBloom = () => {
           shaderMaterial.uniforms.u_avgVolume.value = normalizedAverage;
-          shaderMaterial.uniforms.u_amplitude.value = 0.6;
+          shaderMaterial.uniforms.u_amplitude.value = 0.5;
           shaderMaterial.uniforms.u_explosiveness.value = 0.4;
         };
 
-        const intenseFlow = () => {
+        const intenseBloom = () => {
           shaderMaterial.uniforms.u_avgVolume.value = normalizedAverage * 1.2;
-          shaderMaterial.uniforms.u_amplitude.value = 0.8;
+          shaderMaterial.uniforms.u_amplitude.value = 0.7;
           shaderMaterial.uniforms.u_explosiveness.value = 0.6;
         };
 
         // Choose animation state based on audio intensity
         if (normalizedAverage < 0.3) {
-          gentleFlow();
+          gentleBloom();
         } else if (normalizedAverage < 0.6) {
-          moderateFlow();
+          moderateBloom();
         } else {
-          intenseFlow();
+          intenseBloom();
         }
       } else {
         shaderMaterial.uniforms.u_avgVolume.value = 0.0;
-        shaderMaterial.uniforms.u_amplitude.value = 0.4;
+        shaderMaterial.uniforms.u_amplitude.value = 0.3;
         shaderMaterial.uniforms.u_explosiveness.value = 0.2;
       }
 

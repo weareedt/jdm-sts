@@ -80,46 +80,54 @@ export const vertexShader = `
     vUv = uv;
     vPosition = position;
 
-    // Enhanced wisp particle effect
-    float timeScale = u_time * 0.8;
-    vec3 noisePosition = position * 2.0;
+    // Calculate distance from center
+    float distanceFromCenter = length(position);
     
-    // Create multiple layers of noise for more complex movement
-    float noise1 = snoise(noisePosition + vec3(timeScale * 0.5));
-    float noise2 = snoise(noisePosition * 2.0 + vec3(timeScale * 0.3));
-    float noise3 = snoise(noisePosition * 4.0 + vec3(timeScale * 0.2));
+    // Create outward bloom effect
+    float bloomTime = u_time * 0.5;
+    float bloomSpeed = 1.0 + u_avgVolume * 0.5;
+    float bloomPhase = mod(bloomTime * bloomSpeed + distanceFromCenter, 4.0);
     
-    // Combine noise layers with different weights
-    float combinedNoise = (
-      noise1 * 0.5 +
-      noise2 * 0.3 +
-      noise3 * 0.2
-    ) * (0.5 + u_avgVolume);
+    // Create expansion wave
+    float expansionWave = sin(bloomPhase * 3.14159 * 0.5);
+    
+    // Add noise for randomness
+    vec3 noisePosition = position * 2.0 + vec3(bloomTime);
+    float noise1 = snoise(noisePosition * 1.0) * 0.5;
+    float noise2 = snoise(noisePosition * 2.0) * 0.25;
+    float noise3 = snoise(noisePosition * 4.0) * 0.125;
+    float combinedNoise = noise1 + noise2 + noise3;
 
-    // Create spiral movement
-    float angle = timeScale + length(position) * 2.0;
-    vec3 spiral = vec3(
-      sin(angle) * (1.0 + combinedNoise * 0.5),
-      cos(angle) * (1.0 + combinedNoise * 0.5),
-      sin(timeScale * 0.5) * combinedNoise
-    );
+    // Create outward direction
+    vec3 outwardDir = normalize(position);
+    
+    // Calculate expansion
+    float baseExpansion = expansionWave * (1.0 + u_avgVolume);
+    float noiseExpansion = combinedNoise * u_explosiveness * (1.0 + u_avgVolume);
+    float totalExpansion = baseExpansion + noiseExpansion;
 
-    // Add audio-reactive displacement
-    vec3 displacement = vNormal * (combinedNoise * 0.5 + u_avgVolume * 0.3);
-    displacement += spiral * (0.2 + u_avgVolume * 0.1);
+    // Apply outward movement
+    vec3 bloomOffset = outwardDir * totalExpansion;
+    
+    // Add spiral movement
+    float spiralAngle = bloomTime + distanceFromCenter * 2.0;
+    vec3 spiralOffset = vec3(
+      sin(spiralAngle) * 0.2,
+      cos(spiralAngle) * 0.2,
+      sin(spiralAngle * 0.5) * 0.1
+    ) * (1.0 - expansionWave);
 
-    // Create particle-like movement
-    float particleOffset = snoise(position + vec3(timeScale)) * u_explosiveness;
-    displacement += vNormal * particleOffset * (0.3 + u_avgVolume * 0.2);
-
+    // Combine movements
+    vec3 finalPosition = position + bloomOffset + spiralOffset;
+    
     // Store displacement for fragment shader
-    vDisplacement = combinedNoise + particleOffset;
+    vDisplacement = totalExpansion;
 
-    // Apply final position with smooth transitions
-    vec3 finalPosition = position + displacement * (0.8 + u_amplitude * 0.4);
+    // Adjust point size based on position and audio
+    float size = (3.0 - distanceFromCenter * 0.2) * (1.0 + u_avgVolume);
+    gl_PointSize = max(size * (1.0 + expansionWave * 0.5), 1.0);
     
     gl_Position = projectionMatrix * modelViewMatrix * vec4(finalPosition, 1.0);
-    gl_PointSize = (2.0 + u_avgVolume * 3.0) * (1.0 - length(finalPosition) * 0.1);
   }
 `;
 
@@ -137,40 +145,51 @@ export const fragmentShader = `
   varying float vDisplacement;
 
   void main() {
-    // Define our color palette
+    // Create point shape
+    vec2 cxy = 2.0 * gl_PointCoord - 1.0;
+    float r = dot(cxy, cxy);
+    float delta = fwidth(r);
+    float alpha = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, r);
+
+    // Define core colors
     vec3 blue = vec3(0.0, 0.4, 1.0);
     vec3 red = vec3(1.0, 0.2, 0.2);
     vec3 yellow = vec3(1.0, 0.9, 0.2);
     vec3 white = vec3(1.0, 1.0, 1.0);
 
-    // Create dynamic color transitions
-    float timeFlow = u_time * 0.3;
-    float displacement = vDisplacement * 2.0;
+    // Distance-based color mixing
+    float distanceFromCenter = length(vPosition);
+    float normalizedDist = clamp(distanceFromCenter * 0.25, 0.0, 1.0);
     
-    // Mix colors based on displacement and time
-    vec3 color1 = mix(blue, red, sin(timeFlow + displacement) * 0.5 + 0.5);
-    vec3 color2 = mix(yellow, white, cos(timeFlow - displacement) * 0.5 + 0.5);
-    vec3 baseColor = mix(color1, color2, sin(timeFlow * 0.5) * 0.5 + 0.5);
+    // Time-based color variation
+    float timeFlow = u_time * 0.3;
+    float colorPhase = mod(timeFlow + vDisplacement * 2.0, 6.28318);
+    
+    // Create bloom color gradient
+    vec3 innerColor = mix(white, blue, normalizedDist * 0.5);
+    vec3 midColor = mix(blue, red, (normalizedDist - 0.5) * 2.0);
+    vec3 outerColor = mix(red, yellow, max(0.0, (normalizedDist - 0.75) * 4.0));
+    
+    // Combine colors based on distance
+    vec3 bloomColor;
+    if (normalizedDist < 0.5) {
+        bloomColor = mix(innerColor, midColor, normalizedDist * 2.0);
+    } else {
+        bloomColor = mix(midColor, outerColor, (normalizedDist - 0.5) * 2.0);
+    }
 
-    // Add white highlights for particle effect
-    float highlight = pow(1.0 - length(vPosition) * 0.15, 3.0);
-    baseColor = mix(baseColor, white, highlight * (0.3 + u_avgVolume * 0.2));
+    // Add sparkle effect
+    float sparkle = pow(1.0 - r, 3.0) * (1.0 + sin(colorPhase) * 0.5);
+    bloomColor += white * sparkle * (0.3 + u_avgVolume * 0.2);
 
-    // Create soft particle effect
-    float distanceFromCenter = length(gl_PointCoord - vec2(0.5));
-    float softness = 0.05 + u_avgVolume * 0.02;
-    float alpha = smoothstep(0.5, 0.5 - softness, distanceFromCenter);
-
-    // Add audio-reactive glow
+    // Add glow based on audio
     float glow = u_avgVolume * 0.5;
-    baseColor += glow * mix(blue, white, 0.5);
+    bloomColor += glow * mix(blue, white, 0.5);
 
-    // Add fresnel effect for edge glow
-    vec3 viewDirection = normalize(cameraPosition - vPosition);
-    float fresnel = pow(1.0 - max(dot(viewDirection, vNormal), 0.0), 3.0);
-    baseColor += fresnel * white * 0.3;
+    // Calculate final alpha
+    float distanceAlpha = 1.0 - smoothstep(0.0, 1.0, normalizedDist);
+    float finalAlpha = alpha * (distanceAlpha * 0.8 + 0.2) * (0.6 + glow * 0.4);
 
-    // Final color with transparency
-    gl_FragColor = vec4(baseColor, alpha * (0.6 + glow * 0.4));
+    gl_FragColor = vec4(bloomColor, finalAlpha);
   }
 `;
