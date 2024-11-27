@@ -1,14 +1,19 @@
 {
   "files": {
-    "main.css": "/jdn-sts/static/css/main.390307a1.css",
-    "main.js": "/jdn-sts/static/js/main.848395ee.js",
+    "main.css": "/jdn-sts/static/css/main.dced1ee1.css",
+    "main.js": "/jdn-sts/static/js/main.3e4ba30c.js",
+    "static/media/JDN AI Backgorund (Vertical).png": "/jdn-sts/static/media/JDN AI Backgorund (Vertical).39fd1898ac085540455d.png",
+    "static/media/JDN AI Backgorund (Horizontal).png": "/jdn-sts/static/media/JDN AI Backgorund (Horizontal).a74a68e4a2ba4a413cef.png",
+    "static/media/SF-Pro-Text-Bold.otf": "/jdn-sts/static/media/SF-Pro-Text-Bold.9ef3e7915275d9c15bbb.otf",
+    "static/media/SF-Pro-Display-Bold.otf": "/jdn-sts/static/media/SF-Pro-Display-Bold.b1f4d2c69fa808ebca12.otf",
+    "static/media/SF-Pro-Text-Regular.otf": "/jdn-sts/static/media/SF-Pro-Text-Regular.6a39aa208dfcb99af10a.otf",
+    "static/media/SF-Pro-Display-Regular.otf": "/jdn-sts/static/media/SF-Pro-Display-Regular.d1f5e6e16dd4f75c3950.otf",
     "index.html": "/jdn-sts/index.html",
-    "static/media/topic.svg": "/jdn-sts/static/media/topic.718c4017f66211f49e44ed7aed8e66ef.svg",
-    "main.390307a1.css.map": "/jdn-sts/static/css/main.390307a1.css.map",
-    "main.848395ee.js.map": "/jdn-sts/static/js/main.848395ee.js.map"
+    "main.dced1ee1.css.map": "/jdn-sts/static/css/main.dced1ee1.css.map",
+    "main.3e4ba30c.js.map": "/jdn-sts/static/js/main.3e4ba30c.js.map"
   },
   "entrypoints": [
-    "static/css/main.390307a1.css",
-    "static/js/main.848395ee.js"
+    "static/css/main.dced1ee1.css",
+    "static/js/main.3e4ba30c.js"
   ]
 }
