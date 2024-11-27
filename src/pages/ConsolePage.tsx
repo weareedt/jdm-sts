@@ -124,6 +124,7 @@ export function ConsolePage() {
             items={state.items}
             wavRecorder={recorder.current}
             wavStreamPlayer={streamPlayer.current}
+            waitingForCommand={state.waitingForCommand}
           />
 
           <ChatInput

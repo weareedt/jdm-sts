@@ -7,6 +7,66 @@ import * as THREE from 'three';
 import { sendMessage } from '../utils/api';
 import { transcribeAudioMesolitica, audioBufferToBlob } from '../utils/transcription';
 
+// Function to check for magic word variations
+const checkMagicWord = (text: string): boolean => {
+  // Convert to lowercase for case-insensitive matching
+  const normalizedText = text.toLowerCase();
+  
+  // Common variations and misspellings of "terra"
+  const variations = [
+    'terra', 'tera', 'tara', 'terah', 'terra',
+    'tere', 'teraa', 'teera', 'tearah', 'terrah',
+    'pera'
+  ];
+
+  // Split text into words and check each word
+  const words = normalizedText.split(/\s+/);
+  
+  for (const word of words) {
+    // Direct match with variations
+    if (variations.includes(word)) {
+      return true;
+    }
+
+    // Check for similar words using Levenshtein distance
+    const maxDistance = 2; // Allow up to 2 character differences
+    if (variations.some(variation => levenshteinDistance(word, variation) <= maxDistance)) {
+      return true;
+    }
+
+    // Check for partial matches (in case word is part of a larger word)
+    if (variations.some(variation => word.includes(variation))) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
+// Levenshtein distance calculation for fuzzy matching
+const levenshteinDistance = (a: string, b: string): number => {
+  if (a.length === 0) return b.length;
+  if (b.length === 0) return a.length;
+
+  const matrix = Array(b.length + 1).fill(null).map(() => Array(a.length + 1).fill(null));
+
+  for (let i = 0; i <= a.length; i++) matrix[0][i] = i;
+  for (let j = 0; j <= b.length; j++) matrix[j][0] = j;
+
+  for (let j = 1; j <= b.length; j++) {
+    for (let i = 1; i <= a.length; i++) {
+      const substitutionCost = a[i - 1] === b[j - 1] ? 0 : 1;
+      matrix[j][i] = Math.min(
+        matrix[j][i - 1] + 1, // deletion
+        matrix[j - 1][i] + 1, // insertion
+        matrix[j - 1][i - 1] + substitutionCost // substitution
+      );
+    }
+  }
+
+  return matrix[b.length][a.length];
+};
+
 export const useConversation = (apiKey: string,
   LOCAL_RELAY_SERVER_URL: string,
   recorderRef: MutableRefObject<WavRecorder | null>,
@@ -37,7 +97,8 @@ export const useConversation = (apiKey: string,
     sound: null,
     analyser: null,
     isPlaying: false,
-    isAudioInitialized: false
+    isAudioInitialized: false,
+    waitingForCommand: false
   });
 
   const isFirefox = navigator.userAgent.match(/Firefox\/([1]{1}[7-9]{1}|[2-9]{1}[0-9]{1})/);
@@ -459,58 +520,49 @@ export const useConversation = (apiKey: string,
     });
 
     if (value === 'server_vad' && client.current.isConnected()) {
-      // await recorder.current.record((data) => client.current.appendInputAudio(data.mono));
       console.log('[DEBUG] Setting up VAD recording');
 
       let isProcessing = false;
       let consecutiveSilentFrames = 0;
       let lastAmplitude = 0;
       let isSpeaking = false;
+      let waitingForCommand = false; // Flag to indicate we're waiting for the command after "terra"
+      setState(prev => ({ ...prev, waitingForCommand }));
 
       const setupRecording = async () => {
         try {
           await recorder.current?.end();
           await recorder.current?.begin();
-          // Record audio and handle voice detection
+          
           await recorder.current?.record(async (data) => {
-            // Get frequencies for voice detection
             const frequencies = recorder.current?.getFrequencies('voice');
             if (frequencies) {
-              // Check if voice has stopped by looking at the average amplitude
               const avgAmplitude = frequencies.values.reduce((sum, val) => sum + val, 0) / frequencies.values.length;
-              console.log('[DEBUG] Average amplitude:', avgAmplitude);
+              // console.log('[DEBUG] Average amplitude:', avgAmplitude);
 
-              // Detect if speaking started
               if (avgAmplitude > 0.1) {
                 isSpeaking = true;
                 consecutiveSilentFrames = 0;
-
-                // Send audio data to OpenAI while speaking
                 client.current?.appendInputAudio(data.mono);
               }
 
-              // Only process if we've detected speech
               if (isSpeaking) {
-                // Count consecutive silent frames
                 if (avgAmplitude < 0.1) {
                   consecutiveSilentFrames++;
-                  console.log('[DEBUG] Silent frames:', consecutiveSilentFrames);
+                  // console.log('[DEBUG] Silent frames:', consecutiveSilentFrames);
                 } else {
                   consecutiveSilentFrames = 0;
                 }
 
-                // If voice stops (2 consecutive silent frames) and not already processing
                 if (consecutiveSilentFrames >= 2 && !isProcessing) {
                   console.log('[DEBUG] Voice stopped, processing audio');
                   isProcessing = true;
 
                   try {
-                    // Get WAV blob using save() without downloading
                     const wavResult = await recorder.current?.save(true);
-                    console.log('[DEBUG] WAV blob created:', wavResult);
+                    // console.log('[DEBUG] WAV blob created:', wavResult);
 
                     if (wavResult) {
-                      // Transcribe with Mesolitica using the WAV blob
                       const transcription = await transcribeAudioMesolitica(wavResult.blob, {
                         model: 'base',
                         language: 'ms'
@@ -519,26 +571,44 @@ export const useConversation = (apiKey: string,
                       console.log('[DEBUG] Mesolitica transcription:', transcription);
 
                       if (transcription) {
-                        // Send transcribed text to JDN
-                        const jdnResponse = await sendMessage({
-                          message: transcription.toString(),
-                          session_id: Date.now().toString()
-                        });
+                        const transcriptionText = transcription.toString();
+                        
+                        if (!waitingForCommand) {
+                          // Check for magic word only if not already waiting for command
+                          const magicWordDetected = checkMagicWord(transcriptionText);
+                          console.log('[DEBUG] Magic word detection result:', magicWordDetected);
 
-                        console.log('[DEBUG] JDN response:', jdnResponse);
+                          if (magicWordDetected) {
+                            console.log('[DEBUG] Magic word detected! Waiting for command...');
+                            waitingForCommand = true;
+                          }
+                        } else {
+                          // We're waiting for command, this transcription is the command
+                          console.log('[DEBUG] Received command after magic word:', transcriptionText);
+                          
+                          // Send command to JDN
+                          const jdnResponse = await sendMessage({
+                            message: transcriptionText,
+                            session_id: Date.now().toString()
+                          });
 
-                        // Send JDN's response to OpenAI for TTS
-                        if (jdnResponse && jdnResponse.response) {
-                          client.current?.sendUserMessageContent([
-                            {
-                              type: 'input_text',
-                              text: transcription.toString(),
-                            },
-                            {
-                              type: 'input_text',
-                              text: `AI Server Response: ${jdnResponse.response.text} (Emotion: ${jdnResponse.response.emotion})`,
-                            },
-                          ]);
+                          console.log('[DEBUG] JDN response:', jdnResponse);
+
+                          if (jdnResponse && jdnResponse.response) {
+                            client.current?.sendUserMessageContent([
+                              {
+                                type: 'input_text',
+                                text: transcriptionText,
+                              },
+                              {
+                                type: 'input_text',
+                                text: `AI Server Response: ${jdnResponse.response.text} (Emotion: ${jdnResponse.response.emotion})`,
+                              },
+                            ]);
+                          }
+                          
+                          // Reset waiting flag after processing command
+                          waitingForCommand = false;
                         }
                       }
                     }
@@ -546,14 +616,11 @@ export const useConversation = (apiKey: string,
                   } catch (error) {
                     console.error('[ERROR] Processing failed:', error);
                   } finally {
-                    // Reset flags after processing
                     isProcessing = false;
                     consecutiveSilentFrames = 0;
                     isSpeaking = false;
-                    // Clear the recording buffer
                     recorder.current?.clear();
                     console.log('[DEBUG] Processing complete');
-                    // Restart recording after processing is complete
                     await setupRecording();
                   }
                 }
@@ -563,12 +630,10 @@ export const useConversation = (apiKey: string,
           });
         } catch (error) {
           console.error('[ERROR] Failed to setup VAD recording:', error);
-          // If setup fails, try to restart recording
           await setupRecording();
         }
       };
 
-      // Initial setup of recording
       await setupRecording();
     }
 
