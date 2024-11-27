@@ -5,14 +5,16 @@ import './ConsolePage.scss';
 import { useConversation } from '../hooks/useConversation';
 import { useAudio } from '../hooks/useAudio';
 import { useVisualization } from '../hooks/useVisualization';
+import { useWebcam } from '../hooks/useWebcam';
 import { WavRecorder, WavStreamPlayer } from '../lib/wavtools/index.js';
 
 // Components
 import { ControlPanel } from '../components/console/ControlPanel';
 import { Visualization } from '../components/console/Visualization';
-import { ChatWindow } from '../components/console/ChatWindow';
+//import { ChatWindow } from '../components/console/ChatWindow';
 import { ActionControls } from '../components/console/ActionControls';
-
+import { WebcamComponent } from '../components/console/Webcam';
+import { ChatInput } from '../components/console/ChatWindow';
 const LOCAL_RELAY_SERVER_URL = process.env.REACT_APP_LOCAL_RELAY_SERVER_URL || '';
 
 export function ConsolePage() {
@@ -53,6 +55,7 @@ export function ConsolePage() {
 
   const { initializeAudio, handleStartPause } = useAudio();
   const { shaderMaterialRef } = useVisualization(uiRefs.mount, state.animationColor);
+  const { isWebcamEnabled, webcamError, checkWebcamPermissions } = useWebcam();
 
   // Event Handlers
   const handleResetApiKey = useCallback(() => {
@@ -114,6 +117,7 @@ export function ConsolePage() {
       />
 
       <div className="content-main">
+        <WebcamComponent />
         <div className="content-logs">
           <Visualization
             mountRef={uiRefs.mount}
@@ -122,11 +126,9 @@ export function ConsolePage() {
             wavStreamPlayer={streamPlayer.current}
           />
 
-          <ChatWindow
-            isMinimized={state.isMinimized}
+          <ChatInput
             items={state.items}
             userMessage={state.userMessage}
-            onMinimizeToggle={handleMinimizeToggle}
             onMessageChange={handleMessageChange}
             onMessageSend={handleSendMessage}
             onDeleteItem={handleDeleteItem}
