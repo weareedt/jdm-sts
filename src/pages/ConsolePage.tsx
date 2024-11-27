@@ -139,6 +139,7 @@ export function ConsolePage() {
             isConnected={state.isConnected}
             canPushToTalk={state.canPushToTalk}
             isRecording={state.isRecording}
+            isColorControlVisible={state.isColorControlVisible}
             onTurnEndTypeChange={changeTurnEndType}
             onStartRecording={startRecording}
             onStopRecording={stopRecording}
