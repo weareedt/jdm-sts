@@ -83,49 +83,52 @@ export const vertexShader = `
     // Calculate distance from center
     float distanceFromCenter = length(position);
     
-    // Create outward bloom effect
-    float bloomTime = u_time * 0.5;
-    float bloomSpeed = 1.0 + u_avgVolume * 0.5;
-    float bloomPhase = mod(bloomTime * bloomSpeed + distanceFromCenter, 4.0);
+    // Create wing-like formations
+    float wingTime = u_time * 0.3;
+    float wingAngle = atan(position.y, position.x);
+    float wingPhase = sin(wingAngle * 4.0 + wingTime) * cos(wingAngle * 2.0);
     
-    // Create expansion wave
-    float expansionWave = sin(bloomPhase * 3.14159 * 0.5);
+    // Create crystalline structure
+    float crystalPhase = sin(wingAngle * 8.0) * cos(distanceFromCenter * 4.0);
     
-    // Add noise for randomness
-    vec3 noisePosition = position * 2.0 + vec3(bloomTime);
+    // Combine wing and crystal effects
+    float structureEffect = wingPhase * crystalPhase * (1.0 + u_avgVolume);
+    
+    // Add noise for ethereal movement
+    vec3 noisePosition = position * 2.0 + vec3(wingTime);
     float noise1 = snoise(noisePosition * 1.0) * 0.5;
     float noise2 = snoise(noisePosition * 2.0) * 0.25;
     float noise3 = snoise(noisePosition * 4.0) * 0.125;
     float combinedNoise = noise1 + noise2 + noise3;
 
-    // Create outward direction
-    vec3 outwardDir = normalize(position);
+    // Create outward direction with wing influence
+    vec3 outwardDir = normalize(position + vec3(structureEffect * 0.5));
     
-    // Calculate expansion
-    float baseExpansion = expansionWave * (1.0 + u_avgVolume);
+    // Calculate expansion with ethereal movement
+    float baseExpansion = (1.0 + structureEffect) * (1.0 + u_avgVolume);
     float noiseExpansion = combinedNoise * u_explosiveness * (1.0 + u_avgVolume);
     float totalExpansion = baseExpansion + noiseExpansion;
 
-    // Apply outward movement
-    vec3 bloomOffset = outwardDir * totalExpansion;
+    // Apply ethereal movement
+    vec3 etherealOffset = outwardDir * totalExpansion;
     
-    // Add spiral movement
-    float spiralAngle = bloomTime + distanceFromCenter * 2.0;
+    // Add spiral movement for flowing effect
+    float spiralAngle = wingTime + distanceFromCenter * 2.0;
     vec3 spiralOffset = vec3(
       sin(spiralAngle) * 0.2,
       cos(spiralAngle) * 0.2,
       sin(spiralAngle * 0.5) * 0.1
-    ) * (1.0 - expansionWave);
+    ) * (1.0 - baseExpansion * 0.2);
 
     // Combine movements
-    vec3 finalPosition = position + bloomOffset + spiralOffset;
+    vec3 finalPosition = position + etherealOffset + spiralOffset;
     
     // Store displacement for fragment shader
     vDisplacement = totalExpansion;
 
-    // Adjust point size based on position and audio
-    float size = (3.0 - distanceFromCenter * 0.2) * (1.0 + u_avgVolume);
-    gl_PointSize = max(size * (1.0 + expansionWave * 0.5), 1.0);
+    // Dynamic point size based on position and audio
+    float size = (2.5 - distanceFromCenter * 0.15) * (1.0 + u_avgVolume);
+    gl_PointSize = max(size * (1.0 + structureEffect * 0.3), 1.0);
     
     gl_Position = projectionMatrix * modelViewMatrix * vec4(finalPosition, 1.0);
   }
@@ -145,51 +148,57 @@ export const fragmentShader = `
   varying float vDisplacement;
 
   void main() {
-    // Create point shape
+    // Create soft particle shape
     vec2 cxy = 2.0 * gl_PointCoord - 1.0;
     float r = dot(cxy, cxy);
     float delta = fwidth(r);
     float alpha = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, r);
 
-    // Define core colors
-    vec3 blue = vec3(0.0, 0.4, 1.0);
-    vec3 red = vec3(1.0, 0.2, 0.2);
-    vec3 yellow = vec3(1.0, 0.9, 0.2);
-    vec3 white = vec3(1.0, 1.0, 1.0);
+    // Define wisp colors
+    vec3 coreColor = vec3(1.0, 0.95, 0.9);  // Bright white-gold core
+    vec3 innerColor = vec3(0.2, 0.6, 1.0);  // Bright blue
+    vec3 midColor = vec3(0.0, 0.3, 0.8);    // Deep blue
+    vec3 outerColor = vec3(1.0, 0.4, 0.2);  // Warm red/orange
 
     // Distance-based color mixing
     float distanceFromCenter = length(vPosition);
-    float normalizedDist = clamp(distanceFromCenter * 0.25, 0.0, 1.0);
+    float normalizedDist = clamp(distanceFromCenter * 0.3, 0.0, 1.0);
     
     // Time-based color variation
-    float timeFlow = u_time * 0.3;
+    float timeFlow = u_time * 0.2;
     float colorPhase = mod(timeFlow + vDisplacement * 2.0, 6.28318);
     
-    // Create bloom color gradient
-    vec3 innerColor = mix(white, blue, normalizedDist * 0.5);
-    vec3 midColor = mix(blue, red, (normalizedDist - 0.5) * 2.0);
-    vec3 outerColor = mix(red, yellow, max(0.0, (normalizedDist - 0.75) * 4.0));
-    
-    // Combine colors based on distance
-    vec3 bloomColor;
-    if (normalizedDist < 0.5) {
-        bloomColor = mix(innerColor, midColor, normalizedDist * 2.0);
+    // Create ethereal gradient
+    vec3 baseColor;
+    if (normalizedDist < 0.3) {
+        // Intense core
+        baseColor = mix(coreColor, innerColor, normalizedDist * 3.33);
+    } else if (normalizedDist < 0.6) {
+        // Wing region
+        baseColor = mix(innerColor, midColor, (normalizedDist - 0.3) * 3.33);
     } else {
-        bloomColor = mix(midColor, outerColor, (normalizedDist - 0.5) * 2.0);
+        // Outer glow
+        baseColor = mix(midColor, outerColor, (normalizedDist - 0.6) * 2.5);
     }
 
     // Add sparkle effect
-    float sparkle = pow(1.0 - r, 3.0) * (1.0 + sin(colorPhase) * 0.5);
-    bloomColor += white * sparkle * (0.3 + u_avgVolume * 0.2);
+    float sparklePhase = sin(colorPhase * 2.0) * cos(colorPhase * 3.0);
+    float sparkleIntensity = pow(1.0 - r, 4.0) * (0.5 + sparklePhase * 0.5);
+    vec3 sparkleColor = mix(coreColor, innerColor, sparklePhase);
+    baseColor += sparkleColor * sparkleIntensity * (0.3 + u_avgVolume * 0.4);
 
-    // Add glow based on audio
-    float glow = u_avgVolume * 0.5;
-    bloomColor += glow * mix(blue, white, 0.5);
+    // Add ethereal glow
+    float glowStrength = u_avgVolume * 0.6;
+    baseColor += mix(innerColor, coreColor, 0.5) * glowStrength;
 
-    // Calculate final alpha
+    // Particle shadow effect
+    float shadowIntensity = smoothstep(0.3, 0.7, r) * 0.4;
+    baseColor = mix(baseColor, vec3(0.0, 0.1, 0.2), shadowIntensity);
+
+    // Calculate final alpha with ethereal fade
     float distanceAlpha = 1.0 - smoothstep(0.0, 1.0, normalizedDist);
-    float finalAlpha = alpha * (distanceAlpha * 0.8 + 0.2) * (0.6 + glow * 0.4);
+    float finalAlpha = alpha * (distanceAlpha * 0.7 + 0.3) * (0.6 + glowStrength * 0.4);
 
-    gl_FragColor = vec4(bloomColor, finalAlpha);
+    gl_FragColor = vec4(baseColor, finalAlpha);
   }
 `;

@@ -24,26 +24,36 @@ export const useVisualization = (mountRef: React.RefObject<HTMLDivElement>, anim
     renderer.setSize(width, height);
     mountRef.current.appendChild(renderer.domElement);
 
-    camera.position.z = 14;
+    // Adjust camera position for better wisp visibility
+    camera.position.z = 12;
 
-    // Create particles with density gradient
-    const particleCount = 8000; // Increased particle count for better bloom effect
+    // Create particles with density gradient optimized for wisp effect
+    const particleCount = 12000; // Increased for more detailed wisp effect
     const positions = new Float32Array(particleCount * 3);
     const normals = new Float32Array(particleCount * 3);
 
-    // Helper function to create random point in sphere with density gradient
+    // Helper function to create point with wisp-like distribution
     const createPoint = (index: number) => {
       const i3 = index * 3;
       
-      // Use inverse square distribution for denser center
-      const radius = Math.pow(Math.random(), 0.5) * 3;
+      // Use custom distribution for wisp shape
+      const radius = Math.pow(Math.random(), 0.7) * 4; // Adjusted for wider spread
       const theta = Math.random() * Math.PI * 2;
-      const phi = Math.acos((Math.random() * 2) - 1);
       
-      // Calculate position
+      // Modified phi distribution for wing-like shape
+      let phi: number;
+      if (Math.random() < 0.6) {
+        // Core and wing particles
+        phi = (Math.random() * 0.8 + 0.1) * Math.PI;
+      } else {
+        // Scattered particles for ethereal effect
+        phi = Math.acos((Math.random() * 2) - 1);
+      }
+      
+      // Calculate position with slight vertical stretch
       positions[i3] = radius * Math.sin(phi) * Math.cos(theta);
-      positions[i3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
-      positions[i3 + 2] = radius * Math.cos(phi);
+      positions[i3 + 1] = radius * Math.sin(phi) * Math.sin(theta) * 1.2; // Vertical stretch
+      positions[i3 + 2] = radius * Math.cos(phi) * 0.8; // Flatten slightly
 
       // Calculate normal (direction from center)
       const length = Math.sqrt(
@@ -73,7 +83,7 @@ export const useVisualization = (mountRef: React.RefObject<HTMLDivElement>, anim
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
 
-    // Updated material settings for bloom effect
+    // Updated material settings for wisp effect
     const shaderMaterial = new THREE.ShaderMaterial({
       vertexShader,
       fragmentShader,
@@ -82,8 +92,8 @@ export const useVisualization = (mountRef: React.RefObject<HTMLDivElement>, anim
         u_amplitude: { value: 0.0 },
         u_explosiveness: { value: 0.0 },
         u_avgVolume: { value: 0.0 },
-        u_color1: { value: new THREE.Color('#0066ff') }, // Blue
-        u_color2: { value: new THREE.Color('#ff3333') }, // Red
+        u_color1: { value: new THREE.Color('#4287f5') }, // Ethereal blue
+        u_color2: { value: new THREE.Color('#ff6b3d') }, // Warm orange
       },
       transparent: true,
       depthWrite: false,
@@ -119,13 +129,14 @@ export const useVisualization = (mountRef: React.RefObject<HTMLDivElement>, anim
     // Initialize audio immediately
     initAudio();
 
-    // Animation loop
+    // Animation loop with wisp behavior
     const animate = () => {
       const animationFrame = requestAnimationFrame(animate);
-      shaderMaterial.uniforms.u_time.value += 0.01;
+      shaderMaterial.uniforms.u_time.value += 0.008; // Slowed down for more ethereal movement
 
-      // Subtle rotation for additional movement
-      particles.rotation.y += 0.0005;
+      // Gentle rotation for flowing effect
+      particles.rotation.y += 0.0003;
+      particles.rotation.x = Math.sin(shaderMaterial.uniforms.u_time.value * 0.2) * 0.1;
 
       if (analyser) {
         const dataArray = new Uint8Array(analyser.frequencyBinCount);
@@ -133,37 +144,38 @@ export const useVisualization = (mountRef: React.RefObject<HTMLDivElement>, anim
         const average = dataArray.reduce((sum, value) => sum + value, 0) / dataArray.length;
         const normalizedAverage = average / 255;
 
-        // Define bloom animation states
-        const gentleBloom = () => {
+        // Define wisp animation states
+        const gentleWisp = () => {
+          shaderMaterial.uniforms.u_avgVolume.value = normalizedAverage * 0.6;
+          shaderMaterial.uniforms.u_amplitude.value = 0.2;
+          shaderMaterial.uniforms.u_explosiveness.value = 0.15;
+        };
+
+        const activeWisp = () => {
           shaderMaterial.uniforms.u_avgVolume.value = normalizedAverage * 0.8;
-          shaderMaterial.uniforms.u_amplitude.value = 0.3;
-          shaderMaterial.uniforms.u_explosiveness.value = 0.2;
+          shaderMaterial.uniforms.u_amplitude.value = 0.4;
+          shaderMaterial.uniforms.u_explosiveness.value = 0.3;
         };
 
-        const moderateBloom = () => {
+        const energeticWisp = () => {
           shaderMaterial.uniforms.u_avgVolume.value = normalizedAverage;
-          shaderMaterial.uniforms.u_amplitude.value = 0.5;
-          shaderMaterial.uniforms.u_explosiveness.value = 0.4;
-        };
-
-        const intenseBloom = () => {
-          shaderMaterial.uniforms.u_avgVolume.value = normalizedAverage * 1.2;
-          shaderMaterial.uniforms.u_amplitude.value = 0.7;
-          shaderMaterial.uniforms.u_explosiveness.value = 0.6;
+          shaderMaterial.uniforms.u_amplitude.value = 0.6;
+          shaderMaterial.uniforms.u_explosiveness.value = 0.45;
         };
 
         // Choose animation state based on audio intensity
         if (normalizedAverage < 0.3) {
-          gentleBloom();
+          gentleWisp();
         } else if (normalizedAverage < 0.6) {
-          moderateBloom();
+          activeWisp();
         } else {
-          intenseBloom();
+          energeticWisp();
         }
       } else {
-        shaderMaterial.uniforms.u_avgVolume.value = 0.0;
-        shaderMaterial.uniforms.u_amplitude.value = 0.3;
-        shaderMaterial.uniforms.u_explosiveness.value = 0.2;
+        // Default gentle movement when no audio
+        shaderMaterial.uniforms.u_avgVolume.value = 0.1;
+        shaderMaterial.uniforms.u_amplitude.value = 0.2;
+        shaderMaterial.uniforms.u_explosiveness.value = 0.15;
       }
 
       renderer.render(scene, camera);
