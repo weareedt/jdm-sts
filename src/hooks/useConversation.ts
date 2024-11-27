@@ -97,7 +97,8 @@ export const useConversation = (apiKey: string,
     sound: null,
     analyser: null,
     isPlaying: false,
-    isAudioInitialized: false
+    isAudioInitialized: false,
+    waitingForCommand: false
   });
 
   const isFirefox = navigator.userAgent.match(/Firefox\/([1]{1}[7-9]{1}|[2-9]{1}[0-9]{1})/);
@@ -526,6 +527,7 @@ export const useConversation = (apiKey: string,
       let lastAmplitude = 0;
       let isSpeaking = false;
       let waitingForCommand = false; // Flag to indicate we're waiting for the command after "terra"
+      setState(prev => ({ ...prev, waitingForCommand }));
 
       const setupRecording = async () => {
         try {

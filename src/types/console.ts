@@ -45,6 +45,7 @@ export interface ConsoleState {
   analyser: THREE.AudioAnalyser | null;
   isPlaying: boolean;
   isAudioInitialized: boolean;
+  waitingForCommand: boolean;
 }
 
 export interface UIRefs {

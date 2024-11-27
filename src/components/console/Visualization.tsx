@@ -7,6 +7,7 @@ interface VisualizationProps {
   items: any[];
   wavRecorder?: any;
   wavStreamPlayer?: any;
+  waitingForCommand?: boolean;
 }
 
 export const Visualization: React.FC<VisualizationProps> = ({
@@ -14,6 +15,7 @@ export const Visualization: React.FC<VisualizationProps> = ({
   items,
   wavRecorder,
   wavStreamPlayer,
+  waitingForCommand,
 }) => {
   return (
     <div className="content-block events">
