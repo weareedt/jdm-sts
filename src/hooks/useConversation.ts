@@ -44,7 +44,7 @@ export const useConversation = (apiKey: string,
   const sampleRate = 24000;
 
   // Keep all existing refs
-  const recorder = useRef<WavRecorder>(new WavRecorder({ sampleRate: sampleRate }));
+  const recorder = useRef<WavRecorder | null>(null);
   const streamPlayer = useRef<WavStreamPlayer>(new WavStreamPlayer({ sampleRate: sampleRate }));
   const client = useRef<RealtimeClient>(
     new RealtimeClient(
@@ -79,8 +79,6 @@ export const useConversation = (apiKey: string,
     currentClient.updateSession({
       instructions,
       input_audio_transcription: { model: 'whisper-1' },
-      model: 'large-v3',
-      voice: 'shimmer',
     });
 
     // Handle realtime events
@@ -450,7 +448,7 @@ export const useConversation = (apiKey: string,
   const changeTurnEndType = useCallback(async (value: string) => {
     console.log('[DEBUG] Changing turn end type to:', value);
     if (!client.current || !recorder.current) return;
-    
+
     if (value === 'none' && recorder.current.getStatus() === 'recording') {
       await recorder.current.pause();
     }
@@ -458,10 +456,11 @@ export const useConversation = (apiKey: string,
     client.current.updateSession({
       turn_detection: value === 'none' ? null : { type: 'server_vad' },
     });
-    
+
     if (value === 'server_vad' && client.current.isConnected()) {
+      // await recorder.current.record((data) => client.current.appendInputAudio(data.mono));
       console.log('[DEBUG] Setting up VAD recording');
-      
+
       let isProcessing = false;
       let consecutiveSilentFrames = 0;
       let lastAmplitude = 0;
@@ -469,8 +468,8 @@ export const useConversation = (apiKey: string,
 
       const setupRecording = async () => {
         try {
-          await recorder.current.end();
-          await recorder.current.begin();
+          await recorder.current?.end();
+          await recorder.current?.begin();
           // Record audio and handle voice detection
           await recorder.current?.record(async (data) => {
             // Get frequencies for voice detection
@@ -484,7 +483,7 @@ export const useConversation = (apiKey: string,
               if (avgAmplitude > 0.1) {
                 isSpeaking = true;
                 consecutiveSilentFrames = 0;
-                
+
                 // Send audio data to OpenAI while speaking
                 client.current?.appendInputAudio(data.mono);
               }
@@ -503,43 +502,46 @@ export const useConversation = (apiKey: string,
                 if (consecutiveSilentFrames >= 2 && !isProcessing) {
                   console.log('[DEBUG] Voice stopped, processing audio');
                   isProcessing = true;
-                  
+
                   try {
                     // Get WAV blob using save() without downloading
                     const wavResult = await recorder.current?.save(true);
                     console.log('[DEBUG] WAV blob created:', wavResult);
 
-                    // Transcribe with Mesolitica using the WAV blob
-                    const transcription = await transcribeAudioMesolitica(wavResult.blob, {
-                      model: 'base',
-                      language: 'ms'
-                    });
-
-                    console.log('[DEBUG] Mesolitica transcription:', transcription);
-
-                    if (transcription) {
-                      // Send transcribed text to JDN
-                      const jdnResponse = await sendMessage({
-                        message: transcription.toString(),
-                        session_id: Date.now().toString()
+                    if (wavResult) {
+                      // Transcribe with Mesolitica using the WAV blob
+                      const transcription = await transcribeAudioMesolitica(wavResult.blob, {
+                        model: 'base',
+                        language: 'ms'
                       });
 
-                      console.log('[DEBUG] JDN response:', jdnResponse);
+                      console.log('[DEBUG] Mesolitica transcription:', transcription);
 
-                      // Send JDN's response to OpenAI for TTS
-                      if (jdnResponse && jdnResponse.response) {
-                        client.current?.sendUserMessageContent([
-                          {
-                            type: 'input_text',
-                            text: transcription.toString(),
-                          },
-                          {
-                            type: 'input_text',
-                            text: `AI Server Response: ${jdnResponse.response.text} (Emotion: ${jdnResponse.response.emotion})`,
-                          },
-                        ]);
+                      if (transcription) {
+                        // Send transcribed text to JDN
+                        const jdnResponse = await sendMessage({
+                          message: transcription.toString(),
+                          session_id: Date.now().toString()
+                        });
+
+                        console.log('[DEBUG] JDN response:', jdnResponse);
+
+                        // Send JDN's response to OpenAI for TTS
+                        if (jdnResponse && jdnResponse.response) {
+                          client.current?.sendUserMessageContent([
+                            {
+                              type: 'input_text',
+                              text: transcription.toString(),
+                            },
+                            {
+                              type: 'input_text',
+                              text: `AI Server Response: ${jdnResponse.response.text} (Emotion: ${jdnResponse.response.emotion})`,
+                            },
+                          ]);
+                        }
                       }
                     }
+
                   } catch (error) {
                     console.error('[ERROR] Processing failed:', error);
                   } finally {
@@ -568,11 +570,9 @@ export const useConversation = (apiKey: string,
       // Initial setup of recording
       await setupRecording();
     }
-    
+
     setState(prev => ({ ...prev, canPushToTalk: value === 'none' }));
   }, []);
-
-  // ... [Rest of the code remains unchanged]
 
   return {
     state,
