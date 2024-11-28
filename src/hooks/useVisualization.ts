@@ -15,7 +15,7 @@ export const useVisualization = (mountRef: React.RefObject<HTMLDivElement>, anim
 
     // Scene setup
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+    const camera = new THREE.PerspectiveCamera(100, width / height, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ 
       antialias: true, 
       alpha: true,
@@ -26,6 +26,7 @@ export const useVisualization = (mountRef: React.RefObject<HTMLDivElement>, anim
 
     // Adjust camera position for better wisp visibility
     camera.position.z = 12;
+    camera.position.y = -3;
 
     // Create particles with density gradient optimized for wisp effect
     const particleCount = 12000; // Increased for more detailed wisp effect

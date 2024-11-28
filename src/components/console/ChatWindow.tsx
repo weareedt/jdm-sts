@@ -36,7 +36,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       <div className={`chat-input ${isSmallScreen ? 'small-screen' : ''}`} style={{ position: 'absolute', bottom: '0', left: '50%', transform: 'translateX(-50%)' }}>
         <input
           type="text"
-          placeholder="Type your message..."
+          placeholder="Apa itu pendigitalan?"
           value={userMessage}
           onChange={(e) => onMessageChange(e.target.value)}
           onKeyDown={(e) => {
@@ -48,7 +48,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           onClick={onMessageSend}
           className={`send-button ${isSmallScreen ? 'button-small' : ''}`}
         >
-          Send
+          Hantar
         </button>
       </div>
   );

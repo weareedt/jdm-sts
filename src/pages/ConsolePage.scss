@@ -415,7 +415,7 @@
     .visualizer-container {
       position: relative;
       width: 100%;
-      height: 50vh; // Adjust this value to control the height of the visualizer
+      height: 50%; // Adjust this value to control the height of the visualizer
       margin: 20px 0; // Add some vertical spacing
 
       .visualizer {
@@ -459,20 +459,18 @@ audio {
   left: 50%;
   transform: translate(-50%, -50%);
   color: white;
-  background-color: rgba(0, 0, 0, 0.5); /* Optional background for readability */
-  padding: 5px 10px;
-  border-radius: 4px;
   text-align: center;
+  width: 90%;
 }
 
 .assistant-log {
   top: 80%;
-  color: #00ff00; /* Green for assistant response */
+  color: #ffffff; /* Green for assistant response */
 }
 
 .user-log {
-  top: 15%; /* Position it below the assistant log */
-  color: #ffcc00; /* Different color for user transcript */
+  top: 25%; /* Position it below the assistant log */
+  color: #ffffff; /* Different color for user transcript */
 }
 
 .toggle-container {
@@ -516,9 +514,6 @@ audio {
   .input-field {
     width: 400px; 
   }
-  .webcam-container {
-    border: 3px solid #c61961;
-  }
 }
 
 @media (min-width: 786px) and (max-width: 1438px) {
@@ -531,7 +526,6 @@ audio {
   .webcam-container {
     width: 180px;
     height: 240px;
-    border: 3px solid #968528;
   }
 }
 
@@ -541,20 +535,19 @@ audio {
   }
   .chat-input,
   .input-field {
-    width: 200px; 
+    width: 90%; 
   }
   .webcam-container {
-    width: 120px;
-    height: 160px;
-    border: 3px solid #19c6a5;
+    width: 90px;
+    height: 125px;
   }
 }
 
 /* General styles */
 .send-button {
   padding: 12px 12px; 
-  background-color: #19C6A5;
-  color: #333;
+  background-color: #98347c;
+  color: #ffffff;
   border: none;
   border-radius: 10px;
   cursor: pointer;
