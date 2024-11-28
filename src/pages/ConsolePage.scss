@@ -37,7 +37,6 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  margin: 2px 2px;
   background-image: url('../assets/JDN\ AI\ Backgorund\ \(Horizontal\).png'); /* Update the path accordingly */
   background-size: cover; /* Ensures the image covers the entire area */
   background-position: center; /* Centers the image */
@@ -181,7 +180,7 @@
           
           &:active, &.active {
             background-color: #009900; // Change this to your preferred active color
-            color: #333;
+            color: #98347c;
           }
         }
       }
@@ -454,7 +453,7 @@ audio {
 
 .overlay-log {
   position: absolute;
-  font-size: 17px;
+  font-size: 38px;
   top: 70%;
   left: 50%;
   transform: translate(-50%, -50%);
@@ -464,7 +463,7 @@ audio {
 }
 
 .assistant-log {
-  top: 80%;
+  top: 70%;
   color: #ffffff; /* Green for assistant response */
 }
 
