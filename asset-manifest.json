@@ -1,7 +1,7 @@
 {
   "files": {
-    "main.css": "/jdn-sts/static/css/main.49522b4c.css",
-    "main.js": "/jdn-sts/static/js/main.b2cbc05e.js",
+    "main.css": "/jdn-sts/static/css/main.2205bfc0.css",
+    "main.js": "/jdn-sts/static/js/main.6b59b19a.js",
     "static/media/JDN AI Backgorund (Vertical).png": "/jdn-sts/static/media/JDN AI Backgorund (Vertical).39fd1898ac085540455d.png",
     "static/media/JDN AI Backgorund (Horizontal).png": "/jdn-sts/static/media/JDN AI Backgorund (Horizontal).a74a68e4a2ba4a413cef.png",
     "static/media/SF-Pro-Text-Bold.otf": "/jdn-sts/static/media/SF-Pro-Text-Bold.9ef3e7915275d9c15bbb.otf",
@@ -9,11 +9,11 @@
     "static/media/SF-Pro-Text-Regular.otf": "/jdn-sts/static/media/SF-Pro-Text-Regular.6a39aa208dfcb99af10a.otf",
     "static/media/SF-Pro-Display-Regular.otf": "/jdn-sts/static/media/SF-Pro-Display-Regular.d1f5e6e16dd4f75c3950.otf",
     "index.html": "/jdn-sts/index.html",
-    "main.49522b4c.css.map": "/jdn-sts/static/css/main.49522b4c.css.map",
-    "main.b2cbc05e.js.map": "/jdn-sts/static/js/main.b2cbc05e.js.map"
+    "main.2205bfc0.css.map": "/jdn-sts/static/css/main.2205bfc0.css.map",
+    "main.6b59b19a.js.map": "/jdn-sts/static/js/main.6b59b19a.js.map"
   },
   "entrypoints": [
-    "static/css/main.49522b4c.css",
-    "static/js/main.b2cbc05e.js"
+    "static/css/main.2205bfc0.css",
+    "static/js/main.6b59b19a.js"
   ]
 }
