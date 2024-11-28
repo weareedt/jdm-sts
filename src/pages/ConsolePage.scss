@@ -26,6 +26,13 @@
   font-style: normal;
 }
 
+html, body {
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+}
 
 [data-component='ConsolePage'] {
   font-family: 'SF Pro Display', monospace;
@@ -33,14 +40,15 @@
   font-style: normal;
   font-size: 11px;
   color: white;
-  height: 100%;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   background-image: url('../assets/JDN\ AI\ Backgorund\ \(Horizontal\).png'); /* Update the path accordingly */
-  background-size: cover; /* Ensures the image covers the entire area */
-  background-position: center; /* Centers the image */
-  background-repeat: no-repeat; /* Prevents the image from repeating */
+  background-size: cover; 
+  background-position: center; 
+  background-repeat: no-repeat; 
+  width: 100vw;
   & > div {
     flex-shrink: 0;
   }
@@ -403,6 +411,8 @@
   width: 100vw;
   background-color: #000; // Adjust as needed
   color: #fff; // Adjust as needed
+  width: 100vw;
+  height: 100vh;
 
 
   .content-main {
@@ -479,13 +489,6 @@ audio {
   z-index: 1000;
 }
 
-.push-to-talk{
-  display: none;
-  position: fixed;
-  bottom: 20px;
-  z-index: 1000; 
-}
-
 .chat-input {
   display: flex;
   align-items: center;
@@ -496,22 +499,50 @@ audio {
   transform: translateX(-50%);
   width: 500px; 
   gap: 10px; 
-  box-sizing: border-box; 
+  box-sizing: border-box;
 }
 
 .input-field {
   flex-grow: 1;
-  padding: 10px;
+  padding: 10px; 
   border: 1px solid #ccc;
   border-radius: 4px;
-  box-sizing: border-box; 
-}
-@media (min-width: 1439px) {
-  .chat-input {
-    width: 600px; 
+  box-sizing: border-box;
+  overflow: auto; 
+  resize: none; 
+  line-height: 1.5; 
+  white-space: pre-wrap; 
+  word-wrap: break-word; 
+
+  &::placeholder {
+    color: #999; 
   }
-  .input-field {
-    width: 400px; 
+}
+
+.send-button {
+  padding: 10px 10px; 
+  background-color: #98347c;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.send-button:hover {
+  background-color: #1abc93;
+}
+
+.push-to-talk {
+  padding: 10px 10px;
+  background-color: #98347c;
+  border-radius: 20px;
+  border: none;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: background-color 0.3s ease;
+
+  &:hover {
+    background-color: #1abc93;
   }
 }
 
@@ -540,21 +571,6 @@ audio {
     width: 90px;
     height: 125px;
   }
-}
-
-/* General styles */
-.send-button {
-  padding: 12px 12px; 
-  background-color: #98347c;
-  color: #ffffff;
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-  box-sizing: border-box;
-}
-
-.send-button:hover {
-  background-color: #1abc93;
 }
 
 .webcam-container {

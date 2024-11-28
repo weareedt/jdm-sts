@@ -1,6 +1,7 @@
 import React from 'react';
-import { Button } from '../button/Button';
 import { Toggle } from '../toggle/Toggle';
+
+
 
 interface ActionControlsProps {
   isConnected: boolean;
@@ -18,8 +19,6 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
   isRecording,
   isColorControlVisible = true,
   onTurnEndTypeChange,
-  onStartRecording,
-  onStopRecording
 }) => {
   return (
     <div className="content-actions">
@@ -33,18 +32,6 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
           />
         )}
       </div>
-      <div className="spacer" />
-      {isConnected && canPushToTalk && (
-        <Button
-          className="push-to-talk"
-          label={isRecording ? '' : ''}
-          buttonStyle={isRecording ? 'alert' : 'regular'}
-          disabled={!isConnected || !canPushToTalk}
-          onMouseDown={onStartRecording}
-          onMouseUp={onStopRecording}
-        />
-      )}
-      <div className="spacer" />
     </div>
   );
 };

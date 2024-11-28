@@ -6,6 +6,7 @@ import { Icon } from 'react-feather';
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   label?: string;
   icon?: Icon;
+  iconSrc?: string;
   iconPosition?: 'start' | 'end';
   iconColor?: 'red' | 'green' | 'grey';
   iconFill?: boolean;
@@ -13,8 +14,9 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export function Button({
-  label = 'Okay',
+  label,
   icon = void 0,
+  iconSrc = void 0,
   iconPosition = 'start',
   iconColor = void 0,
   iconFill = false,
@@ -39,7 +41,10 @@ export function Button({
           <StartIcon />
         </span>
       )}
-      <span className="label">{label}</span>
+      {iconSrc && (
+        <img src={iconSrc} alt="Icon" style={{ width: '24px', height: '24px' }} />
+      )}
+      {label && <span className="label">{label}</span>}
       {EndIcon && (
         <span className="icon icon-end">
           <EndIcon />

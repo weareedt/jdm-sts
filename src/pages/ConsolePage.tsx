@@ -67,9 +67,6 @@ export function ConsolePage() {
     }
   }, []);
 
-  const handleMinimizeToggle = useCallback(() => {
-    setState(prev => ({ ...prev, isMinimized: !prev.isMinimized }));
-  }, [setState]);
 
   const handleContentTopToggle = useCallback(() => {
     if (uiRefs.contentTop.current) {
@@ -133,6 +130,11 @@ export function ConsolePage() {
             onMessageChange={handleMessageChange}
             onMessageSend={handleSendMessage}
             onDeleteItem={handleDeleteItem}
+            onStartRecording={startRecording}
+            onStopRecording={stopRecording}
+            isConnected={state.isConnected}
+            canPushToTalk={state.canPushToTalk}
+            isRecording={state.isRecording}
           />
 
           <ActionControls
