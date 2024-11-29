@@ -67,7 +67,7 @@ export function ConsolePage() {
     setShowInactivityMessage(false);
     inactivityTimeoutRef.current = setTimeout(() => {
       setShowInactivityMessage(true);
-    }, 60000); 
+    }, 50000); 
   }, []);
 
   useEffect(() => {
