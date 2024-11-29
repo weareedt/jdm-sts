@@ -504,7 +504,7 @@ audio {
 
 .input-field {
   flex-grow: 1;
-  padding: 10px; 
+  padding: 35px; /* Set padding to 35px */
   border: 1px solid #ccc;
   border-radius: 4px;
   box-sizing: border-box;
@@ -513,10 +513,11 @@ audio {
   line-height: 1.5; 
   white-space: pre-wrap; 
   word-wrap: break-word; 
-
-  &::placeholder {
-    color: #999; 
-  }
+  height: auto; /* Allow height to adjust based on content */
+  min-height: 4em; /* Minimum height for 4 rows */
+}
+.input-field::placeholder {
+  color: #999; 
 }
 
 .send-button {
@@ -581,3 +582,17 @@ audio {
   border-radius: 4px;
 }
 
+.inactivity-message {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  color: white;
+  z-index: 1000;
+  position: absolute;
+  font-size: 30px;
+  top: 40%;
+  transform: translate(-50%, -50%);
+  color: white;
+  text-align: center;
+  width: 90%;
+}

@@ -15,7 +15,6 @@ interface ActionControlsProps {
 
 export const ActionControls: React.FC<ActionControlsProps> = ({
   isConnected,
-  canPushToTalk,
   isRecording,
   isColorControlVisible = true,
   onTurnEndTypeChange,

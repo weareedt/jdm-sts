@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import './ConsolePage.scss';
 
 // Hooks
@@ -57,6 +57,29 @@ export function ConsolePage() {
   const { shaderMaterialRef } = useVisualization(uiRefs.mount, state.animationColor);
   const { isWebcamEnabled, webcamError, checkWebcamPermissions } = useWebcam();
 
+  const [showInactivityMessage, setShowInactivityMessage] = useState(false);
+  const inactivityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const resetInactivityTimer = useCallback(() => {
+    if (inactivityTimeoutRef.current) {
+      clearTimeout(inactivityTimeoutRef.current);
+    }
+    setShowInactivityMessage(false);
+    inactivityTimeoutRef.current = setTimeout(() => {
+      setShowInactivityMessage(true);
+    }, 600000); 
+  }, []);
+
+  useEffect(() => {
+    resetInactivityTimer(); // Start the timer on component mount
+
+    return () => {
+      if (inactivityTimeoutRef.current) {
+        clearTimeout(inactivityTimeoutRef.current);
+      }
+    };
+  }, [resetInactivityTimer]);
+
   // Event Handlers
   const handleResetApiKey = useCallback(() => {
     const newApiKey = prompt('OpenAI API Key');
@@ -77,7 +100,8 @@ export function ConsolePage() {
 
   const handleMessageChange = useCallback((message: string) => {
     setState(prev => ({ ...prev, userMessage: message }));
-  }, [setState]);
+    resetInactivityTimer(); // Reset timer on message change
+  }, [setState, resetInactivityTimer]);
 
   const handleDeleteItem = useCallback((id: string) => {
     if (state.isConnected) {
@@ -122,6 +146,7 @@ export function ConsolePage() {
             wavRecorder={recorder.current}
             wavStreamPlayer={streamPlayer.current}
             waitingForCommand={state.waitingForCommand}
+            hideLogs={showInactivityMessage}
           />
 
           <ChatInput
@@ -148,6 +173,11 @@ export function ConsolePage() {
           />
         </div>
       </div>
+      {showInactivityMessage && (
+        <div className="inactivity-message">
+          Saya Terra, ada apa yang saya boleh bantu?
+        </div>
+      )}
     </div>
   );
 }

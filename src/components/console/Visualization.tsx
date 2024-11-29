@@ -8,6 +8,7 @@ interface VisualizationProps {
   wavRecorder?: any;
   wavStreamPlayer?: any;
   waitingForCommand?: boolean;
+  hideLogs: boolean;
 }
 
 export const Visualization: React.FC<VisualizationProps> = ({
@@ -16,6 +17,7 @@ export const Visualization: React.FC<VisualizationProps> = ({
   wavRecorder,
   wavStreamPlayer,
   waitingForCommand,
+  hideLogs,
 }) => {
   return (
     <div className="content-block events">
@@ -37,7 +39,7 @@ export const Visualization: React.FC<VisualizationProps> = ({
         )}
 
         {/* Overlay log for the assistant's latest message */}
-        {items.length > 0 && (
+        {!hideLogs && items.length > 0 && (
           <div className="overlay-log assistant-log">
             {items.filter((item) => item.role === 'assistant').slice(-1)[0]
               ?.formatted.transcript ||
@@ -48,7 +50,7 @@ export const Visualization: React.FC<VisualizationProps> = ({
         )}
 
         {/* Overlay log for the user's latest transcript */}
-        {items.length > 0 && (
+        {!hideLogs && items.length > 0 && (
           <div className="overlay-log user-log">
             {items.filter((item) => item.role === 'user').slice(-1)[0]
               ?.formatted.transcript ||

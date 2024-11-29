@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { X } from 'react-feather';
 import { ItemType } from '@openai/realtime-api-beta/dist/lib/client.js';
-import chatIcon from '../../assets/topic.svg';
+import { AnimatedInput } from './AnimatedInput';
 import sendIcon from '../../assets/send.svg';
 import micIcon from '../../assets/mic.svg';
 
@@ -27,7 +27,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   onStopRecording,
   isConnected,
   canPushToTalk,
-  isRecording,
+
 }) => {
   const [isSmallScreen, setIsSmallScreen] = useState(false);
   const userItems = items.filter(item => item.role !== 'assistant');
@@ -38,14 +38,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       setIsSmallScreen(window.innerWidth >= 426 && window.innerWidth <= 785);
     };
     window.addEventListener('resize', handleResize);
-    handleResize(); // Initial check
+    handleResize(); 
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   return (
     <div className={`chat-input ${isSmallScreen ? 'small-screen' : ''}`}>
-      <textarea
-        placeholder="Apa itu pendigitalan?"
+      <AnimatedInput
+        placeholder="Hi Saya Terra! Ada apa-apa saya boleh bantu?"
         value={userMessage}
         onChange={(e) => onMessageChange(e.target.value)}
         onFocus={(e) => e.target.classList.add('focused')}
@@ -57,7 +57,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           }
         }}
         className={`input-field`}
-        rows={4}
+        rows={5}
       />
       <button
         onClick={onMessageSend}
