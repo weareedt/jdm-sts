@@ -1,8 +1,8 @@
 {
   "files": {
-    "main.css": "/jdn-sts/static/css/main.db6a0dee.css",
+    "main.css": "/jdn-sts/static/css/main.ce293b2d.css",
     "main.js": "/jdn-sts/static/js/main.88e5898c.js",
-    "static/media/JDN AI Backgorund (Vertical).png": "/jdn-sts/static/media/JDN AI Backgorund (Vertical).39fd1898ac085540455d.png",
+    "static/media/Batik 2k (Brighten).png": "/jdn-sts/static/media/Batik 2k (Brighten).01dd187a71a3f421d93e.png",
     "static/media/JDN AI Backgorund (Horizontal).png": "/jdn-sts/static/media/JDN AI Backgorund (Horizontal).a74a68e4a2ba4a413cef.png",
     "static/media/SF-Pro-Text-Bold.otf": "/jdn-sts/static/media/SF-Pro-Text-Bold.9ef3e7915275d9c15bbb.otf",
     "static/media/SF-Pro-Display-Bold.otf": "/jdn-sts/static/media/SF-Pro-Display-Bold.b1f4d2c69fa808ebca12.otf",
@@ -11,11 +11,11 @@
     "index.html": "/jdn-sts/index.html",
     "static/media/mic.svg": "/jdn-sts/static/media/mic.b6d0d39041e2fde71a1fd0c37af74ddc.svg",
     "static/media/send.svg": "/jdn-sts/static/media/send.045352e9aa7d98994484ffb8ec3dbe38.svg",
-    "main.db6a0dee.css.map": "/jdn-sts/static/css/main.db6a0dee.css.map",
+    "main.ce293b2d.css.map": "/jdn-sts/static/css/main.ce293b2d.css.map",
     "main.88e5898c.js.map": "/jdn-sts/static/js/main.88e5898c.js.map"
   },
   "entrypoints": [
-    "static/css/main.db6a0dee.css",
+    "static/css/main.ce293b2d.css",
     "static/js/main.88e5898c.js"
   ]
 }
